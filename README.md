@@ -8,6 +8,8 @@ and every move is undoable.
 
 [ภาษาไทย →](README.th.md)
 
+![Reviewing duplicates](docs/01-review.png)
+
 > The web interface is currently **in Thai**. Everything else — code, comments,
 > CLI, this document — is in English. If you want an English UI, open an issue.
 
@@ -28,6 +30,25 @@ Opens `http://127.0.0.1:8777` in your browser. Pick a folder, scan, review, dele
 ```
 
 Requires Python 3.7+. No dependencies.
+
+---
+
+## Screenshots
+
+Duplicate groups, with the outcome of each group labelled before you commit to it —
+selected copies are marked **"will be moved"**, the survivor is marked **"keeping"**:
+
+![Duplicate groups](docs/02-groups.png)
+
+Quarantine: everything you removed is still here, previewable, and restorable —
+per file or per batch:
+
+![Quarantine](docs/04-quarantine.png)
+
+Pick any folder on the machine without typing a path — mounted drives and home
+folders are one click away:
+
+![Folder picker](docs/03-picker.png)
 
 ---
 
