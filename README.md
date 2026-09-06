@@ -45,11 +45,6 @@ per file or per batch:
 
 ![Quarantine](docs/04-quarantine.png)
 
-Pick any folder on the machine without typing a path — mounted drives and home
-folders are one click away:
-
-![Folder picker](docs/03-picker.png)
-
 ---
 
 ## Why not just compare filenames?
