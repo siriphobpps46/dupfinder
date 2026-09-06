@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dupfinder — หาไฟล์ซ้ำ</title>
+<style>
+/* ============================================================
+   Burgundy Ops — deep charcoal workspace, wine accents.
+   Layout เดิม เปลี่ยนเฉพาะสีกับรายละเอียดการใช้งาน
+   ============================================================ */
+:root{
+  /* ---- เทาเข้ม: ไล่จากมืดสุดไปอ่อนสุด ---- */
+  --bg:#161619;          /* พื้นหน้า */
+  --surface:#1e1e22;     /* การ์ด */
+  --surface-2:#26262c;   /* input, แถบเครื่องมือ */
+  --surface-3:#2f2f36;   /* hover */
+  --line:#33333b;
+  --line-strong:#45454f;
+  --fg:#eaeaec;
+  --fg-muted:#9b9ba6;
+  --fg-dim:#6f6f7a;
+
+  /* ---- shell: กระจกฝ้าเทาเข้ม ---- */
+  --shell:rgba(17,17,20,.74);
+  --shell-border:rgba(255,255,255,.07);
+  --shell-blur:14px;
+
+  /* ---- burgundy ---- */
+  --wine:#a32545;         /* สีหลัก */
+  --wine-strong:#bb2b50;  /* hover */
+  --wine-deep:#6d1428;    /* พื้นเข้ม */
+  --wine-tint:rgba(163,37,69,.12);
+  --wine-tint-2:rgba(163,37,69,.20);
+  --focus:#c1476a;
+  --on-wine:#ffffff;
+
+  /* ---- badge: ลดความสดให้เข้ากับโทนมืด ---- */
+  --ok-bg:rgba(52,199,123,.14);    --ok-fg:#5fd694;
+  --warn-bg:rgba(227,179,65,.14);  --warn-fg:#e3b341;
+  --gray-bg:rgba(255,255,255,.07); --gray-fg:#a8a8b3;
+  --info-bg:rgba(122,162,247,.14); --info-fg:#8ab4f8;
+  --plum-bg:rgba(205,143,168,.14); --plum-fg:#cd8fa8;
+
+  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:9999px;
+  --fast:130ms; --normal:200ms; --slow:300ms;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --sh-subtle:0 1px 2px rgba(0,0,0,.30);
+  --sh-raised:0 6px 18px rgba(0,0,0,.38);
+  --sh-dialog:0 24px 48px rgba(0,0,0,.55);
+
+  --header-h:64px; --side-w:256px; --side-collapsed:64px;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{font-size:16px}
+body{
+  margin:0; background:var(--bg); color:var(--fg);
+  font:400 .875rem/1.55 var(--sans);   /* 1.55 เผื่อสระบน-ล่างของไทย */
+  -webkit-font-smoothing:antialiased;
+}
+.canvas{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(1000px 560px at 82% -10%, rgba(163,37,69,.16), transparent 60%),
+    radial-gradient(760px 480px at -6% 104%, rgba(109,20,40,.14), transparent 58%),
+    var(--bg);
+}
+.mono{font-family:var(--mono)}
+.muted{color:var(--fg-muted)}
+.hide{display:none!important}
+.grow{flex:1;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+::selection{background:var(--wine-tint-2);color:#fff}
+
+/* ---------------------------------------------------------- shell: header */
+.shell-header{
+  position:fixed; top:0; left:0; right:0; z-index:40; height:var(--header-h);
+  display:flex; align-items:center; gap:12px; padding:0 16px;
+  background:var(--shell); backdrop-filter:blur(var(--shell-blur));
+  -webkit-backdrop-filter:blur(var(--shell-blur));
+  border-bottom:1px solid var(--shell-border);
+}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand .mark{
+  width:30px;height:30px;flex:none;border-radius:var(--r-md);
+  background:linear-gradient(150deg,var(--wine-strong),var(--wine-deep));
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-weight:700;font-size:.8125rem;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
+}
+.brand b{font-size:.9375rem;font-weight:700;letter-spacing:-.01em;line-height:1.15;display:block}
+.brand span{
+  display:block;font-size:.6875rem;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--fg-dim);
+}
+.shell-search{
+  flex:1;max-width:520px;height:36px;padding:0 12px;
+  background:rgba(255,255,255,.05);color:var(--fg);
+  border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);
+  font:400 .875rem/1.25rem var(--sans);outline:none;
+  transition:border-color var(--fast) var(--ease),background var(--fast) var(--ease);
+}
+.shell-search::placeholder{color:var(--fg-dim)}
+.shell-search:focus{border-color:var(--focus);background:rgba(255,255,255,.08)}
+.icon-btn{
+  height:36px;width:36px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:transparent;border:none;border-radius:var(--r-md);cursor:pointer;
+  color:var(--fg-muted);transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.icon-btn:hover{background:rgba(255,255,255,.07);color:var(--wine-strong)}
+
+/* --------------------------------------------------------- shell: sidebar */
+.shell-side{
+  position:fixed; top:var(--header-h); bottom:0; left:0; z-index:35; width:var(--side-w);
+  display:flex; flex-direction:column; gap:3px; padding:16px;
+  background:var(--shell); backdrop-filter:blur(var(--shell-blur));
+  -webkit-backdrop-filter:blur(var(--shell-blur));
+  border-right:1px solid var(--shell-border);
+}
+.side-label{
+  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-dim);padding:6px 12px 6px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;width:100%;
+  padding:0 12px;min-height:38px;border:none;border-radius:var(--r-md);
+  background:transparent;color:var(--fg-muted);
+  font:600 .8125rem/1rem var(--sans);text-align:left;cursor:pointer;
+  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
+}
+.nav-item svg{flex:none;width:16px;height:16px}
+.nav-item:hover{background:rgba(255,255,255,.05);color:var(--fg)}
+.nav-item.on{background:var(--wine);color:var(--on-wine);box-shadow:var(--sh-subtle)}
+.nav-item .pill{
+  margin-left:auto;font-size:.6875rem;font-weight:700;padding:1px 7px;border-radius:var(--r-pill);
+  background:rgba(255,255,255,.10);color:inherit;
+}
+.side-foot{
+  margin-top:auto;padding:12px;border-top:1px solid var(--shell-border);
+  font-size:.75rem;line-height:1.55;color:var(--fg-dim);
+}
+.side-foot b{color:var(--fg-muted);font-weight:600}
+
+/* ------------------------------------------------------------- workspace */
+.workspace{position:relative;z-index:1;margin-left:var(--side-w);padding-top:var(--header-h)}
+.container{max-width:1400px;margin:0 auto;padding:32px;padding-bottom:132px}
+.page-head{margin-bottom:24px}
+.page-head h1{margin:0;font-size:1.5rem;font-weight:700;line-height:2rem;letter-spacing:-.015em}
+.page-head p{margin:5px 0 0;color:var(--fg-muted)}
+.eyebrow{
+  font-size:.6875rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--wine-strong);margin-bottom:7px;
+}
+section+section{margin-top:20px}
+
+/* ------------------------------------------------------------------ card */
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh-subtle);
+}
+.card-title{font-size:1.0625rem;font-weight:700;line-height:1.6rem;margin:0}
+.card-sub{color:var(--fg-muted);margin:4px 0 0;font-size:.8125rem}
+.card-head{margin-bottom:16px}
+
+/* ---------------------------------------------------------- metric cards */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.metric{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:16px 20px;box-shadow:var(--sh-subtle);
+}
+.metric .k{
+  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-dim);
+}
+.metric .v{font-size:1.75rem;font-weight:700;line-height:2.25rem;letter-spacing:-.025em;margin-top:2px}
+.metric.hero{
+  border-color:var(--wine-deep);
+  background:linear-gradient(140deg,var(--wine-tint),transparent 70%),var(--surface);
+}
+.metric.hero .k{color:var(--wine-strong)}
+.metric.hero .v{color:#f2c3ce;font-size:2rem;line-height:2.5rem}
+
+/* --------------------------------------------------------------- controls */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  height:38px;padding:0 15px;border-radius:var(--r-sm);cursor:pointer;
+  background:var(--surface-2);color:var(--fg);border:1px solid var(--line-strong);
+  font:500 .875rem/1.25rem var(--sans);white-space:nowrap;
+  transition:background var(--fast) var(--ease),border-color var(--fast) var(--ease),
+             color var(--fast) var(--ease);
+}
+.btn:hover{background:var(--surface-3);border-color:var(--fg-dim)}
+/* ปุ่มหลัก = สว่าง เพราะ burgundy สงวนไว้ให้การกระทำที่ย้อนยาก */
+.btn.primary{background:var(--fg);border-color:var(--fg);color:var(--bg);font-weight:600}
+.btn.primary:hover{background:#fff;border-color:#fff;color:var(--bg)}
+.btn.danger{background:var(--wine);border-color:var(--wine);color:var(--on-wine);font-weight:600}
+.btn.danger:hover{background:var(--wine-strong);border-color:var(--wine-strong)}
+.btn.sm{height:30px;padding:0 11px;font-size:.8125rem}
+.btn.quiet{background:transparent;border-color:transparent;color:var(--fg-muted)}
+.btn.quiet:hover{background:var(--surface-2);color:var(--fg);border-color:transparent}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.btn:disabled:hover{background:var(--surface-2);border-color:var(--line-strong);color:var(--fg)}
+.btn.primary:disabled:hover{background:var(--fg);color:var(--bg)}
+.btn.danger:disabled:hover{background:var(--wine);border-color:var(--wine)}
+
+.container input:not([type=checkbox]),
+.sheet input:not([type=checkbox]),
+.container select{
+  height:38px;padding:0 12px;border-radius:var(--r-sm);
+  background:var(--surface-2);color:var(--fg);
+  border:1px solid var(--line-strong);font:400 .875rem/1.25rem var(--sans);outline:none;
+  transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease);
+}
+.container input::placeholder,.sheet input::placeholder{color:var(--fg-dim)}
+.container input:not([type=checkbox]):focus,
+.sheet input:not([type=checkbox]):focus,
+.container select:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(193,71,106,.20)}
+.container select{cursor:pointer;padding-right:8px}
+label.check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--fg-muted)}
+input[type=checkbox]{accent-color:var(--wine);width:16px;height:16px;cursor:pointer}
+.field-label{
+  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-dim);
+}
+.inline-field{display:flex;align-items:center;gap:8px;color:var(--fg-muted);font-size:.8125rem}
+
+/* --------------------------------------------------------------- telemetry */
+.bar{height:6px;background:var(--surface-2);border-radius:var(--r-pill);overflow:hidden}
+.bar>i{display:block;height:100%;width:0;border-radius:var(--r-pill);
+  background:linear-gradient(90deg,var(--wine-deep),var(--wine-strong));
+  transition:width var(--slow) var(--ease)}
+
+/* ------------------------------------------------------------------ badge */
+.badge{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);
+  font:600 .6875rem/1rem var(--sans);letter-spacing:.04em;white-space:nowrap;
+}
+.badge.production{background:var(--ok-bg);color:var(--ok-fg)}
+.badge.mock{background:var(--warn-bg);color:var(--warn-fg)}
+.badge.planned{background:var(--gray-bg);color:var(--gray-fg)}
+.badge.development{background:var(--info-bg);color:var(--info-fg)}
+.badge.integrated{background:var(--plum-bg);color:var(--plum-fg)}
+.badge.wine{background:var(--wine-tint-2);color:#eda3b6}
+
+/* ------------------------------------------------------- duplicate groups */
+.grp{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--sh-subtle);overflow:hidden;margin-bottom:12px;
+}
+.grp>.hd{
+  display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;
+  background:var(--wine-tint);border-bottom:1px solid var(--line);
+  font:600 .6875rem/1rem var(--sans);letter-spacing:.09em;text-transform:uppercase;
+  color:#eda3b6;
+}
+.grp>.hd .plain{color:var(--fg-muted);letter-spacing:0;text-transform:none;font-weight:400;
+  font-size:.8125rem}
+.grp>.hd .hash{margin-left:auto;color:var(--fg-dim);font-family:var(--mono);
+  letter-spacing:0;text-transform:none;font-weight:400}
+.f{display:flex;gap:12px;align-items:center;padding:9px 16px;cursor:pointer;
+  transition:background var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
+.f+.f{border-top:1px solid var(--line)}
+.f:hover{background:var(--surface-2)}
+.f.sel{background:var(--wine-tint);box-shadow:inset 3px 0 0 var(--wine)}
+.f.keep{box-shadow:inset 3px 0 0 var(--ok-fg)}
+.f input[type=checkbox]{width:17px;height:17px;flex:none}
+.thumb{
+  width:52px;height:52px;flex:none;border-radius:var(--r-md);object-fit:cover;
+  background:var(--surface-2);border:1px solid var(--line);cursor:zoom-in;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  font:600 .6875rem/1 var(--sans);letter-spacing:.05em;color:var(--fg-dim);
+}
+.pathwrap{flex:1;min-width:0}
+.p{font-family:var(--mono);font-size:.8125rem;line-height:1.45;word-break:break-all}
+.p .dir{color:var(--fg-dim)}
+.p .name{color:var(--fg);font-weight:600}
+.f.sel .p .name{color:#f2c3ce}
+.meta{font-size:.75rem;color:var(--fg-muted);margin-top:2px}
+.tag{font-size:.6875rem;font-weight:600;padding:2px 8px;border-radius:var(--r-pill);flex:none;display:none}
+.f.sel .tag.del{display:inline-block;background:var(--wine-tint-2);color:#eda3b6}
+.f.keep .tag.keep{display:inline-block;background:var(--ok-bg);color:var(--ok-fg)}
+/* ปุ่มรองโผล่ตอน hover เพื่อลดความรก แต่ยังเข้าถึงด้วยคีย์บอร์ดได้ */
+.f .btn.reveal{opacity:0;transition:opacity var(--fast) var(--ease)}
+.f:hover .btn.reveal,.f:focus-within .btn.reveal{opacity:1}
+@media (hover:none){.f .btn.reveal{opacity:1}}
+
+.empty{padding:44px 24px;text-align:center;color:var(--fg-muted)}
+.empty b{display:block;color:var(--fg);font-size:1rem;margin-bottom:4px}
+.skeleton{padding:18px}
+.skeleton i{display:block;height:12px;border-radius:var(--r-xs);background:var(--surface-2);
+  margin-bottom:10px;animation:pulse 1.3s var(--ease) infinite}
+.skeleton i:nth-child(2){width:72%} .skeleton i:nth-child(3){width:48%}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:.9}}
+.pager{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:20px}
+
+/* ---------------------------------------------------------- quarantine */
+.qhead{display:flex;gap:12px;align-items:center;cursor:pointer;user-select:none}
+.qhead .caret{color:var(--fg-dim);font-size:16px;transition:transform var(--normal) var(--ease)}
+.qhead.open .caret{transform:rotate(90deg)}
+.qbody{margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
+.qtools{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden}
+.seg button{border:none;background:transparent;cursor:pointer;padding:5px 13px;
+  font:500 .8125rem/1rem var(--sans);color:var(--fg-muted)}
+.seg button:hover{color:var(--fg);background:var(--surface-2)}
+.seg button.on{background:var(--wine);color:var(--on-wine);font-weight:600}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.qcell{
+  background:var(--surface-2);border:1px solid var(--line);
+  border-radius:var(--r-md);overflow:hidden;
+  transition:border-color var(--fast) var(--ease),transform var(--fast) var(--ease);
+}
+.qcell:hover{border-color:var(--wine);transform:translateY(-1px)}
+.qcell .th{
+  width:100%;aspect-ratio:1;object-fit:cover;background:var(--surface-3);cursor:zoom-in;
+  display:flex;align-items:center;justify-content:center;
+  font:600 .75rem/1 var(--sans);letter-spacing:.05em;color:var(--fg-dim);
+}
+.qcell .cap{padding:7px 9px;font-size:.75rem;line-height:1.4;word-break:break-all}
+.qcell .cap b{display:block;font-weight:600;color:var(--fg)}
+.qcell .cap span{color:var(--fg-dim)}
+.qrow{display:flex;gap:12px;align-items:center;padding:9px 0}
+.qrow+.qrow{border-top:1px solid var(--line)}
+.qmore{text-align:center;padding-top:12px}
+
+/* ------------------------------------------------------------ action bar */
+.actionbar{
+  position:fixed;left:var(--side-w);right:0;bottom:0;z-index:38;
+  display:flex;align-items:center;gap:14px;padding:12px 32px;min-height:66px;
+  background:var(--shell);backdrop-filter:blur(var(--shell-blur));
+  -webkit-backdrop-filter:blur(var(--shell-blur));
+  border-top:1px solid var(--shell-border);
+}
+.actionbar .count{font-size:1.0625rem;font-weight:700;line-height:1.5rem}
+.actionbar .sub{font-size:.8125rem;color:var(--fg-muted)}
+.msg{font-size:.8125rem;color:var(--fg-muted)}
+.msg .bad{color:#eda3b6}
+
+/* ---------------------------------------------------------------- toast */
+.toasts{position:fixed;right:24px;bottom:86px;z-index:55;display:flex;
+  flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
+.toast{
+  background:var(--surface);border:1px solid var(--line-strong);border-left:3px solid var(--fg-dim);
+  border-radius:var(--r-md);box-shadow:var(--sh-raised);padding:11px 16px;max-width:420px;
+  font-size:.8125rem;color:var(--fg);animation:slidein var(--normal) var(--ease);
+}
+.toast.ok{border-left-color:var(--ok-fg)}
+.toast.bad{border-left-color:var(--wine-strong)}
+@keyframes slidein{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+/* ----------------------------------------------------------------- picker */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(8,8,10,.66);
+  backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
+.sheet{
+  background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:var(--r-lg);box-shadow:var(--sh-dialog);
+  width:min(920px,100%);max-height:86vh;display:flex;flex-direction:column;overflow:hidden;
+}
+.sheet>.top{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center}
+.sheet>.top b{font-size:1.0625rem;font-weight:700}
+.sheet>.bot{padding:14px 22px;border-top:1px solid var(--line);background:var(--surface-2);
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pkbody{display:flex;flex:1;min-height:0}
+.pkside{width:214px;flex:none;border-right:1px solid var(--line);overflow-y:auto;padding:8px}
+.pkside .grp-label{
+  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--fg-dim);padding:10px 10px 4px;
+}
+.pkside button{
+  display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
+  padding:7px 10px;border-radius:var(--r-sm);font:500 .8125rem/1.25rem var(--sans);
+  color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.pkside button:hover{background:var(--wine-tint);color:#eda3b6}
+.pkmain{flex:1;min-width:0;display:flex;flex-direction:column}
+.crumbs{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;
+  flex-wrap:wrap;gap:2px;align-items:center;font-size:.8125rem}
+.crumbs button{background:none;border:none;cursor:pointer;padding:2px 6px;
+  border-radius:var(--r-xs);color:#eda3b6;font:500 .8125rem/1.25rem var(--sans)}
+.crumbs button:hover{background:var(--wine-tint)}
+.crumbs .sep{color:var(--fg-dim)}
+.pklist{flex:1;overflow-y:auto;padding:8px}
+.pklist button{
+  display:flex;gap:10px;align-items:center;width:100%;text-align:left;cursor:pointer;
+  background:none;border:none;padding:8px 12px;border-radius:var(--r-md);
+  font:400 .875rem/1.25rem var(--sans);color:var(--fg);
+}
+.pklist button:hover{background:var(--surface-2)}
+.pklist button.dim{color:var(--fg-dim)}
+.pklist .arrow{margin-left:auto;color:var(--fg-dim)}
+.err{color:#eda3b6}
+
+/* --------------------------------------------------------------- responsive */
+@media (max-width:1100px){
+  .shell-side{width:var(--side-collapsed);padding:16px 8px;align-items:center}
+  .shell-side .side-label,.shell-side .side-foot,.nav-item .txt,.nav-item .pill{display:none}
+  .nav-item{justify-content:center;padding:0}
+  .workspace{margin-left:var(--side-collapsed)}
+  .actionbar{left:var(--side-collapsed)}
+}
+@media (max-width:760px){
+  .shell-side{display:none}
+  .workspace{margin-left:0}
+  .actionbar{left:0;padding:12px 16px}
+  .container{padding:16px;padding-bottom:140px}
+  .brand span{display:none}
+  .pkside{display:none}
+  .toasts{right:12px;left:12px;bottom:92px;align-items:stretch}
+}
+</style>
+</head>
+<body>
+<div class="canvas"></div>
+
+<!-- ============================ shell: header ============================ -->
+<header class="shell-header">
+  <div class="brand">
+    <div class="mark">DF</div>
+    <div>
+      <b>dupfinder</b>
+      <span>duplicate control</span>
+    </div>
+  </div>
+  <input id="q" type="search" class="shell-search" placeholder="กรองด้วยบางส่วนของ path…"
+         onkeydown="if(event.key==='Enter')reload(0)">
+  <button class="icon-btn" title="ใช้ตัวกรอง" onclick="reload(0)" aria-label="กรอง">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+  </button>
+  <span id="hdrStatus"></span>
+</header>
+
+<!-- =========================== shell: sidebar =========================== -->
+<aside class="shell-side">
+  <div class="side-label">workspace</div>
+  <button id="navScan" class="nav-item on" onclick="showTab('scan')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="6.8" cy="6.8" r="4.3"/><path d="M10 10 14 14"/></svg>
+    <span class="txt">สแกนและตรวจ</span>
+  </button>
+  <button id="navQ" class="nav-item" onclick="showTab('q')">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
+         stroke-linecap="round" stroke-linejoin="round">
+      <path d="M1.8 4.6h12.4v8.1a1 1 0 0 1-1 1H2.8a1 1 0 0 1-1-1z"/>
+      <path d="M1.2 2.3h13.6v2.3H1.2zM6.3 7.7h3.4"/></svg>
+    <span class="txt">ถังพักไฟล์</span><span class="pill" id="navQCount"></span>
+  </button>
+  <div class="side-foot">
+    ปุ่มลบ<b> ย้ายไปถังพัก</b> ไม่ได้ลบจริง<br>คืนกลับได้ทุกไฟล์
+  </div>
+</aside>
+
+<!-- ============================== workspace ============================== -->
+<main class="workspace">
+<div class="container">
+
+<!-- ------------------------------ สแกน ------------------------------ -->
+<div id="paneScan">
+  <div class="page-head">
+    <div class="eyebrow">duplicate control</div>
+    <h1>สแกนและตรวจไฟล์ซ้ำ</h1>
+    <p>เทียบเนื้อไฟล์จริงแบบ byte-per-byte ไม่ได้ดูแค่ชื่อ</p>
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2 class="card-title">โฟลเดอร์ที่จะสแกน</h2>
+      <p class="card-sub">เลือกได้ทั้งไดรฟ์นอกและโฟลเดอร์ในเครื่อง · กด Enter ในช่องนี้เพื่อเริ่มสแกน</p>
+    </div>
+    <div class="row" style="flex-wrap:nowrap">
+      <input id="root" class="grow mono" placeholder="เช่น ~/Pictures หรือกดปุ่มเลือกโฟลเดอร์"
+             onkeydown="if(event.key==='Enter')startScan()">
+      <button class="btn" onclick="pkOpen('root')">เลือกโฟลเดอร์…</button>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <label class="inline-field"><span class="field-label">ข้ามไฟล์เล็กกว่า</span>
+        <select id="minsize">
+          <option value="0">ไม่จำกัด</option>
+          <option value="1024">1 KB</option>
+          <option value="4096" selected>4 KB</option>
+          <option value="1048576">1 MB</option>
+          <option value="10485760">10 MB</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="hidden"> รวมไฟล์ซ่อน</label>
+      <div class="grow"></div>
+      <button id="btnScan" class="btn primary" onclick="startScan()">เริ่มสแกน</button>
+      <button id="btnCancel" class="btn danger hide" onclick="api('/api/cancel',{})">หยุดสแกน</button>
+    </div>
+    <div id="prog" class="hide" style="margin-top:16px">
+      <div class="row" style="margin-bottom:8px">
+        <span class="meta grow" id="progText" style="margin:0"></span>
+        <span class="meta mono" id="progPct" style="margin:0"></span>
+      </div>
+      <div class="bar"><i id="progBar"></i></div>
+    </div>
+    <div id="scanErr" class="err" style="margin-top:10px"></div>
+  </section>
+
+  <section class="metrics">
+    <div class="metric"><div class="k">กลุ่มไฟล์ซ้ำ</div><div class="v" id="sGroups">–</div></div>
+    <div class="metric"><div class="k">ไฟล์ที่เกินมา</div><div class="v" id="sFiles">–</div></div>
+    <div class="metric hero"><div class="k">พื้นที่ที่กู้คืนได้</div><div class="v" id="sWaste">–</div></div>
+    <div class="metric"><div class="k">ไฟล์ที่ทำดัชนีไว้</div><div class="v" id="sIndexed">–</div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head row" style="flex-wrap:nowrap;align-items:flex-start">
+      <div class="grow">
+        <h2 class="card-title">เลือกอัตโนมัติ</h2>
+        <p class="card-sub">บอกว่าจะ <b>เก็บ</b> ตัวไหน แล้วระบบติ๊กที่เหลือให้ — เฉพาะกลุ่มในหน้านี้</p>
+      </div>
+      <div class="row" style="flex-wrap:nowrap">
+        <select id="sort" onchange="reload(0)">
+          <option value="waste">เสียพื้นที่มากสุด</option>
+          <option value="size">ไฟล์ใหญ่สุด</option>
+          <option value="count">ซ้ำเยอะสุด</option>
+          <option value="path">เรียงตาม path (A→Z)</option>
+        </select>
+        <select id="pagesize" onchange="reload(0)">
+          <option value="20">20 กลุ่ม/หน้า</option>
+          <option value="40" selected>40 กลุ่ม/หน้า</option>
+          <option value="100">100 กลุ่ม/หน้า</option>
+          <option value="200">200 กลุ่ม/หน้า</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <select id="rule">
+        <option value="old">เก็บตัวที่เก่าที่สุด</option>
+        <option value="new">เก็บตัวที่ใหม่ที่สุด</option>
+        <option value="short">เก็บตัวที่ path สั้นที่สุด</option>
+        <option value="prefer">เก็บตัวที่อยู่ในโฟลเดอร์ที่กำหนด…</option>
+      </select>
+      <input id="prefer" class="grow mono hide" placeholder="โฟลเดอร์ที่อยากเก็บไว้">
+      <button id="btnPrefPick" class="btn hide" onclick="pkOpen('prefer')">เลือกโฟลเดอร์…</button>
+      <button class="btn" onclick="autoSelect()">ติ๊กตัวที่เหลือ</button>
+      <button class="btn quiet" onclick="clearSel()">ล้างที่เลือก</button>
+    </div>
+  </section>
+
+  <section id="groups" style="margin-top:24px"></section>
+  <div class="pager" id="pager"></div>
+</div>
+
+<!-- --------------------------- ถังพักไฟล์ --------------------------- -->
+<div id="paneQ" class="hide">
+  <div class="page-head">
+    <div class="eyebrow">quarantine</div>
+    <h1>ถังพักไฟล์</h1>
+    <p>ไฟล์ที่ย้ายออกมาแล้วแต่ยังไม่ได้ลบจริง — กางดูและคืนกลับได้ทุกเมื่อ</p>
+  </div>
+
+  <section class="card">
+    <div class="row" style="align-items:flex-start">
+      <div class="grow" style="min-width:240px">
+        <h2 class="card-title">ถังพักไฟล์ที่ค้างอยู่</h2>
+        <p class="card-sub" style="margin-bottom:0">ถ้าเคยย้ายไฟล์ไว้แล้วบัญชีหาย
+          (ลบ <code class="mono">.state</code>, ย้ายเครื่อง, เอาไดรฟ์ไปใช้กับเครื่องอื่น)
+          กดค้นหาเพื่อดึงกลับเข้าระบบ</p>
+      </div>
+      <input id="findPath" class="grow mono" placeholder="ค้นหาในโฟลเดอร์…" style="min-width:220px">
+      <button class="btn" onclick="pkOpen('findPath')">เลือก…</button>
+      <button class="btn primary" onclick="findQ()">ค้นหา</button>
+    </div>
+    <div id="findOut"></div>
+  </section>
+
+  <section id="batches" style="margin-top:24px"></section>
+</div>
+
+</div>
+</main>
+
+<!-- ============================= action bar ============================= -->
+<div class="actionbar">
+  <div>
+    <div class="count"><span id="selCount">0</span> ไฟล์</div>
+    <div class="sub" id="selBytes">ยังไม่ได้เลือกอะไร</div>
+  </div>
+  <div class="grow"></div>
+  <span class="msg" id="msg"></span>
+  <button class="btn quiet hide" id="btnClear" onclick="clearSel()">ล้างที่เลือก</button>
+  <button class="btn danger" id="btnDel" disabled onclick="doDelete()">ย้ายไปถังพักไฟล์</button>
+</div>
+
+<!-- =========================== ตัวเลือกโฟลเดอร์ =========================== -->
+<div class="toasts" id="toasts"></div>
+
+<div id="picker" class="modal hide">
+  <div class="sheet">
+    <div class="top">
+      <b id="pkTitle" style="flex:1">เลือกโฟลเดอร์</b>
+      <label class="check"><input type="checkbox" id="pkHidden" onchange="pkGo(PK.path)"> แสดงโฟลเดอร์ซ่อน</label>
+      <button class="btn quiet" onclick="pkClose()">ปิด</button>
+    </div>
+    <div class="pkbody">
+      <div class="pkside" id="pkPlaces"></div>
+      <div class="pkmain">
+        <div class="crumbs" id="pkCrumbs"></div>
+        <div class="pklist" id="pkList"></div>
+      </div>
+    </div>
+    <div class="bot">
+      <input id="pkPath" class="grow mono" onkeydown="if(event.key==='Enter')pkGo(this.value)">
+      <button class="btn" onclick="pkGo(document.getElementById('pkPath').value)">ไป</button>
+      <button class="btn primary" onclick="pkPick()">ใช้โฟลเดอร์นี้</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let SEL = new Map();      // path -> size
+let OFFSET = 0, TOTAL = 0, GROUPS = [];
+const PK = {target: null, path: ''};
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const jsq = s => JSON.stringify(s).replace(/"/g, '&quot;');
+const hum = n => { n = n||0; const u=['B','KB','MB','GB','TB']; let i=0;
+  while (n >= 1024 && i < 4) { n/=1024; i++; }
+  return (i ? n.toFixed(2) : n) + ' ' + u[i]; };
+const badge = (kind, text) => '<span class="badge ' + kind + '">' + text + '</span>';
+
+function toast(text, kind) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + (kind || '');
+  el.textContent = text;
+  $('toasts').appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity .3s'; el.style.opacity = '0';
+    setTimeout(() => el.remove(), 320);
+  }, kind === 'bad' ? 6000 : 3800);
+}
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'},
+                                      body: JSON.stringify(body)} : undefined);
+  return r.json();
+}
+
+function showTab(t) {
+  $('paneScan').classList.toggle('hide', t !== 'scan');
+  $('paneQ').classList.toggle('hide', t !== 'q');
+  $('navScan').classList.toggle('on', t === 'scan');
+  $('navQ').classList.toggle('on', t === 'q');
+  if (t === 'q') {
+    if (!$('findPath').value) $('findPath').value = $('root').value || '';
+    loadBatches();
+  }
+}
+
+$('rule').onchange = () => {
+  const on = $('rule').value === 'prefer';
+  $('prefer').classList.toggle('hide', !on);
+  $('btnPrefPick').classList.toggle('hide', !on);
+};
+
+// ------------------------------------------------------- ตัวเลือกโฟลเดอร์
+async function pkOpen(target) {
+  PK.target = target;
+  $('pkTitle').textContent = {root: 'เลือกโฟลเดอร์ที่จะสแกน',
+    prefer: 'เลือกโฟลเดอร์ที่อยากเก็บไฟล์ไว้',
+    findPath: 'เลือกโฟลเดอร์ที่จะค้นหาถังพักไฟล์'}[target] || 'เลือกโฟลเดอร์';
+  $('picker').classList.remove('hide');
+  const places = await api('/api/places');
+  const byKind = {volume: 'ไดรฟ์', home: 'บ้าน', folder: 'โฟลเดอร์ประจำ'};
+  let html = '', last = null;
+  for (const p of places) {
+    if (p.kind !== last) { html += '<div class="grp-label">' + byKind[p.kind] + '</div>'; last = p.kind; }
+    html += '<button onclick="pkGo(' + jsq(p.path) + ')">' +
+            (p.kind === 'volume' ? '🖴 ' : '📁 ') + esc(p.name) + '</button>';
+  }
+  $('pkPlaces').innerHTML = html;
+  pkGo(($(target).value || '').trim() || places[0].path);
+}
+
+function pkClose() { $('picker').classList.add('hide'); }
+
+async function pkGo(path) {
+  const d = await api('/api/browse?hidden=' + ($('pkHidden').checked ? 1 : 0) +
+                      '&path=' + encodeURIComponent(path || ''));
+  if (d.error) { $('pkList').innerHTML = '<div class="empty err">' + esc(d.error) + '</div>'; return; }
+  PK.path = d.path;
+  $('pkPath').value = d.path;
+
+  $('pkCrumbs').innerHTML = d.crumbs.map((c, i) =>
+    (i ? '<span class="sep">›</span>' : '') +
+    '<button onclick="pkGo(' + jsq(c.path) + ')">' + esc(c.name) + '</button>').join('');
+
+  let html = '';
+  if (d.parent) html += '<button onclick="pkGo(' + jsq(d.parent) +
+    ')"><span>↰</span><span class="muted">ขึ้นไปหนึ่งชั้น</span></button>';
+  for (const dir of d.dirs) {
+    html += '<button class="' + (dir.skipped ? 'dim' : '') + '" onclick="pkGo(' +
+      jsq(dir.path) + ')"><span>📁</span><span>' + esc(dir.name) + '</span>' +
+      (dir.skipped ? badge('planned', 'ระบบข้ามให้') : '') +
+      '<span class="arrow">›</span></button>';
+  }
+  if (!d.dirs.length) html += '<div class="empty">' +
+    (d.denied ? 'เข้าถึงโฟลเดอร์นี้ไม่ได้ — macOS อาจต้องให้สิทธิ์ Full Disk Access กับ Terminal ก่อน'
+              : 'ไม่มีโฟลเดอร์ย่อย') + '</div>';
+  $('pkList').innerHTML = html;
+  $('pkList').scrollTop = 0;
+}
+
+function pkPick() {
+  $(PK.target).value = PK.path;
+  pkClose();
+}
+
+$('picker').onclick = e => { if (e.target.id === 'picker') pkClose(); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape') pkClose(); });
+
+// ------------------------------------------------------------------ สแกน
+async function startScan() {
+  $('scanErr').textContent = '';
+  const r = await api('/api/scan', {
+    root: $('root').value.trim(),
+    min_size: +$('minsize').value,
+    hidden: $('hidden').checked,
+  });
+  if (r.error) { $('scanErr').textContent = r.error; return; }
+  poll();
+}
+
+let polling = false;
+async function poll() {
+  if (polling) return; polling = true;
+  while (true) {
+    const s = await api('/api/state');
+    INDEXED = s.indexed || 0;
+    $('sIndexed').textContent = INDEXED.toLocaleString();
+    const p = s.progress || {};
+    $('btnScan').classList.toggle('hide', s.running);
+    $('btnCancel').classList.toggle('hide', !s.running);
+    $('prog').classList.toggle('hide', !s.running && p.phase !== 'error');
+    $('hdrStatus').innerHTML = s.running ? badge('development', 'กำลังสแกน')
+      : p.phase === 'error' ? badge('mock', 'สแกนไม่สำเร็จ')
+      : p.phase === 'done' ? badge('production', 'สแกนเสร็จแล้ว') : '';
+
+    if (p.phase === 'error') $('scanErr').textContent = p.error;
+    const pct = p.bytes_total ? p.bytes_done / p.bytes_total
+              : p.total ? p.done / p.total : 0;
+    $('progBar').style.width = (pct * 100).toFixed(1) + '%';
+    $('progPct').textContent = pct ? (pct * 100).toFixed(0) + '%' : '';
+    const label = {walk:'1/4 ไล่รายชื่อไฟล์', index:'2/4 ทำดัชนี',
+                   size:'2/4 จัดกลุ่มตามขนาด', head:'3/4 hash หัวไฟล์',
+                   full:'4/4 hash เต็มไฟล์'}[p.phase] || p.phase || '';
+    $('progText').textContent = label + ' — ' + (p.message || '') +
+      (p.bytes_total ? '  (' + hum(p.bytes_done) + ' / ' + hum(p.bytes_total) + ')'
+                     : p.total ? '  (' + p.done + ' / ' + p.total + ')' : '');
+
+    if (!s.running) { polling = false; reload(0); return; }
+    await new Promise(r => setTimeout(r, 700));
+  }
+}
+
+// ------------------------------------------------------------- กลุ่มไฟล์ซ้ำ
+let INDEXED = 0;
+
+async function reload(offset) {
+  OFFSET = offset;
+  if (!GROUPS.length)
+    $('groups').innerHTML = '<div class="card skeleton"><i></i><i></i><i></i></div>';
+  const d = await api('/api/groups?offset=' + offset + '&limit=' + $('pagesize').value +
+                      '&sort=' + $('sort').value + '&q=' + encodeURIComponent($('q').value));
+  TOTAL = d.total_groups; GROUPS = d.groups;
+  $('sGroups').textContent = d.total_groups.toLocaleString();
+  $('sFiles').textContent = (d.extra_files || 0).toLocaleString();
+  $('sWaste').textContent = d.waste_h;
+  render();
+}
+
+function render() {
+  const out = [];
+  for (const g of GROUPS) {
+    out.push('<div class="grp"><div class="hd">' +
+      '<span>ซ้ำ ' + g.files.length + ' ไฟล์</span>' +
+      '<span class="muted" style="letter-spacing:0;text-transform:none">ไฟล์ละ ' + g.size_h + '</span>' +
+      badge('wine', 'กู้คืนได้ ' + g.waste_h) +
+      '<span class="hash">#' + g.hash + '</span></div>');
+    for (const f of g.files) {
+      const i = f.path.lastIndexOf('/');
+      const ext = f.path.split('.').pop().slice(0, 5).toUpperCase();
+      const thumb = f.thumb
+        ? '<img class="thumb" data-src="/api/thumb?path=' + encodeURIComponent(f.path) +
+          '" onerror="this.replaceWith(cellIcon(\'' + esc(ext) + '\',\'thumb\'))"' +
+          ' onclick="window.open(\'/api/file?path=' + encodeURIComponent(f.path) + '\')">'
+        : '<div class="thumb">' + esc(ext) + '</div>';
+      out.push('<label class="f" data-path="' + esc(f.path) + '">' +
+        '<input type="checkbox" onchange="toggle(this,' + g.size + ')"' +
+          (SEL.has(f.path) ? ' checked' : '') + '>' +
+        thumb +
+        '<div class="pathwrap"><div class="p"><span class="dir">' +
+          esc(f.path.slice(0, i + 1)) + '</span><span class="name">' +
+          esc(f.path.slice(i + 1)) + '</span></div>' +
+        '<div class="meta">แก้ไขล่าสุด ' + new Date(f.mtime * 1000).toLocaleString('th-TH') +
+        '</div></div>' +
+        '<span class="tag del">จะถูกย้าย</span><span class="tag keep">เก็บไว้</span>' +
+        '<button class="btn sm quiet reveal" title="เปิดตำแหน่งใน Finder" onclick="event.preventDefault();' +
+          'fetch(\'/api/reveal?path=' + encodeURIComponent(f.path) + '\')">Finder ↗</button>' +
+        '</label>');
+    }
+    out.push('</div>');
+  }
+  $('groups').innerHTML = out.join('') || '<div class="card"><div class="empty">' + emptyText() + '</div></div>';
+
+  paintGroups();
+  lazyThumbs();
+  renderPager();
+  updateBar();
+}
+
+let io;
+function lazyThumbs() {
+  if (io) io.disconnect();
+  io = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (e.isIntersecting && e.target.dataset.src) {
+        e.target.src = e.target.dataset.src;
+        delete e.target.dataset.src;
+        io.unobserve(e.target);
+      }
+    }
+  }, {rootMargin: '400px'});
+  document.querySelectorAll('img[data-src]').forEach(el => io.observe(el));
+  // IntersectionObserver ไม่ยิงถ้าหน้าต่างไม่ได้ถูก render (แท็บพื้นหลัง, หน้าต่างซ่อน)
+  // เลยเช็คเองอีกชั้นว่ารูปไหนอยู่ในจอแล้วบ้าง
+  requestAnimationFrame(() => {
+    for (const el of document.querySelectorAll('img[data-src]')) {
+      const b = el.getBoundingClientRect();
+      if (b.top < innerHeight + 400 && b.bottom > -400) {
+        el.src = el.dataset.src; delete el.dataset.src; io.unobserve(el);
+      }
+    }
+  });
+}
+
+function renderPager() {
+  const n = +$('pagesize').value;
+  const page = Math.floor(OFFSET / n) + 1, pages = Math.max(1, Math.ceil(TOTAL / n));
+  $('pager').innerHTML =
+    '<button class="btn" ' + (OFFSET <= 0 ? 'disabled' : '') + ' onclick="reload(' +
+      Math.max(0, OFFSET - n) + ')">← ก่อนหน้า</button>' +
+    '<span class="muted">หน้า ' + page + ' / ' + pages + '</span>' +
+    '<button class="btn" ' + (OFFSET + n >= TOTAL ? 'disabled' : '') + ' onclick="reload(' +
+      (OFFSET + n) + ')">ถัดไป →</button>';
+}
+
+// -------------------------------------------------------------- การเลือก
+function toggle(cb, size) {
+  const path = cb.closest('.f').dataset.path;
+  if (cb.checked) SEL.set(path, size); else SEL.delete(path);
+  paintGroups();
+  updateBar();
+}
+
+function updateBar() {
+  let bytes = 0;
+  SEL.forEach(v => bytes += v);
+  $('selCount').textContent = SEL.size;
+  $('selBytes').textContent = SEL.size ? 'จะได้พื้นที่คืน ' + hum(bytes) : 'ยังไม่ได้เลือกอะไร';
+  $('btnDel').disabled = SEL.size === 0;
+  $('btnClear').classList.toggle('hide', SEL.size === 0);
+}
+
+function clearSel() {
+  SEL.clear();
+  document.querySelectorAll('.f input[type=checkbox]').forEach(c => c.checked = false);
+  paintGroups();
+  updateBar();
+}
+
+function autoSelect() {
+  const rule = $('rule').value, pref = $('prefer').value.trim();
+  let skipped = 0;
+  for (const g of GROUPS) {
+    const files = g.files.slice();
+    let keep;
+    if (rule === 'old')        keep = files.reduce((a, b) => a.mtime <= b.mtime ? a : b);
+    else if (rule === 'new')   keep = files.reduce((a, b) => a.mtime >= b.mtime ? a : b);
+    else if (rule === 'short') keep = files.reduce((a, b) => a.path.length <= b.path.length ? a : b);
+    else {
+      if (!pref) { toast('ใส่โฟลเดอร์ที่อยากเก็บก่อนครับ', 'bad'); return; }
+      const inside = files.filter(f => f.path.startsWith(pref));
+      if (inside.length === 0 || inside.length === files.length) { skipped++; continue; }
+      keep = inside.reduce((a, b) => a.mtime <= b.mtime ? a : b);
+    }
+    for (const f of files) if (f.path !== keep.path) SEL.set(f.path, g.size);
+  }
+  if (skipped) toast('ข้ามไป ' + skipped + ' กลุ่มที่กำกวม — ไม่ได้ติ๊กอะไรให้');
+  document.querySelectorAll('.f').forEach(el => {
+    const cb = el.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = SEL.has(el.dataset.path);
+  });
+  paintGroups();
+  updateBar();
+}
+
+// ------------------------------------------------------------------- ลบ
+async function doDelete() {
+  const paths = [...SEL.keys()];
+  let bytes = 0; SEL.forEach(v => bytes += v);
+  if (!confirm('ย้าย ' + paths.length + ' ไฟล์ (' + hum(bytes) + ') ไปถังพักไฟล์?\n\n' +
+               'ยังไม่ได้ลบจริง — กดคืนกลับได้จากหน้า “ถังพักไฟล์”')) return;
+  $('btnDel').disabled = true;
+  $('msg').textContent = 'กำลังย้าย…';
+  const r = await api('/api/quarantine', {paths});
+  if (r.error) { $('msg').textContent = ''; toast(r.error, 'bad');
+                 $('btnDel').disabled = false; return; }
+  $('msg').textContent = '';
+  toast('ย้ายไปถังพักแล้ว ' + r.moved + ' ไฟล์ · ได้คืน ' + r.freed_h +
+    (r.failed.length ? ' · ล้มเหลว ' + r.failed.length + ' ไฟล์' : ''), 'ok');
+  SEL.clear();
+  reload(OFFSET);
+}
+
+// ---------------------------------------------------------- ถังพักไฟล์
+let QB = [];                      // รายชื่อชุด (อ้างด้วย index เพราะ batch ซ้ำข้าม root ได้)
+const QOPEN = new Set();
+const QVIEW = {}, QSHOWN = {};
+const QCAP = 60;                  // โชว์กี่ไฟล์ก่อนต้องกด "ดูเพิ่ม"
+
+async function loadBatches() {
+  QB = await api('/api/batches');
+  $('navQCount').textContent = QB.length || '';
+  if (!QB.length) {
+    $('batches').innerHTML = '<div class="card"><div class="empty">ถังพักไฟล์ว่างอยู่</div></div>';
+    return;
+  }
+  $('batches').innerHTML = QB.map((x, i) => {
+    const open = QOPEN.has(i), gone = !x.available;
+    return '<div class="card">' +
+      '<div class="qhead' + (open ? ' open' : '') + '" onclick="qToggle(event,' + i + ')">' +
+        '<span class="caret">›</span>' +
+        '<div class="grow">' +
+          '<div class="row" style="gap:10px">' +
+            '<b class="mono" style="font-size:.9375rem">' + esc(x.batch) + '</b>' +
+            (gone ? badge('mock', 'หาโฟลเดอร์ไม่เจอ') : badge('production', 'พร้อมคืนกลับ')) +
+          '</div>' +
+          '<div class="meta">' + x.files + ' ไฟล์ · ' + x.bytes_h +
+            (x.undone ? ' · คืนกลับแล้ว ' + x.undone + ' ไฟล์' : '') + '</div>' +
+          '<div class="meta mono">' + esc(x.root) + '</div>' +
+        '</div>' +
+        '<button class="btn sm" ' + (gone ? 'disabled' : '') +
+          ' onclick="event.stopPropagation();undo(' + i + ')">คืนกลับที่เดิม</button>' +
+        '<button class="btn sm danger" ' + (gone ? 'disabled' : '') +
+          ' onclick="event.stopPropagation();purge(' + i + ')">ลบถาวร</button>' +
+      '</div>' +
+      (gone ? '<p class="meta" style="margin:12px 0 0">ไดรฟ์อาจไม่ได้เสียบอยู่ — ' +
+              'ระบบจะไม่ยอมลบบัญชีทิ้งจนกว่าจะเจอโฟลเดอร์จริง</p>' : '') +
+      '<div class="qbody' + (open ? '' : ' hide') + '" id="qb-' + i + '"></div>' +
+    '</div>';
+  }).join('');
+  for (const i of QOPEN) qRender(i);
+}
+
+function qToggle(e, i) {
+  if (e.target.closest('button.btn')) return;
+  const open = QOPEN.has(i);
+  open ? QOPEN.delete(i) : QOPEN.add(i);
+  $('qb-' + i).parentElement.querySelector('.qhead').classList.toggle('open', !open);
+  $('qb-' + i).classList.toggle('hide', open);
+  if (!open) qRender(i);
+}
+
+function qView(i, mode) { QVIEW[i] = mode; qRender(i); }
+function qMore(i) { QSHOWN[i] = (QSHOWN[i] || QCAP) + QCAP; qRender(i); }
+
+async function qRender(i) {
+  const box = $('qb-' + i), b = QB[i];
+  if (!box || !b) return;
+  if (!box.dataset.loaded) box.innerHTML = '<div class="meta">กำลังโหลด…</div>';
+  const files = await api('/api/batch?batch=' + encodeURIComponent(b.batch) +
+                          '&root=' + encodeURIComponent(b.root));
+  box.dataset.loaded = '1';
+
+  const live = files.filter(f => f.exists && !f.undone);
+  const mode = QVIEW[i] || 'grid';
+  const shown = QSHOWN[i] || QCAP;
+  const slice = live.slice(0, shown);
+
+  let html = '<div class="qtools">' +
+    '<span class="grow meta">อยู่ในถัง ' + live.length + ' ไฟล์' +
+      (live.length > shown ? ' (แสดง ' + shown + ')' : '') + '</span>' +
+    '<div class="seg">' +
+      '<button class="' + (mode === 'grid' ? 'on' : '') + '" onclick="qView(' + i + ',\'grid\')">ตาราง</button>' +
+      '<button class="' + (mode === 'list' ? 'on' : '') + '" onclick="qView(' + i + ',\'list\')">รายการ</button>' +
+    '</div></div>';
+
+  if (!live.length) {
+    html += '<div class="empty">ไม่มีไฟล์เหลือในชุดนี้แล้ว (คืนกลับหมด หรือเข้าถึงไฟล์ไม่ได้)</div>';
+  } else if (mode === 'grid') {
+    html += '<div class="qgrid">' + slice.map(f => {
+      const name = f.src.slice(f.src.lastIndexOf('/') + 1);
+      const ext = f.src.split('.').pop().slice(0, 5).toUpperCase();
+      return '<div class="qcell">' + qThumb(f, ext, 'th') +
+        '<div class="cap" title="' + esc(f.src) + '"><b>' + esc(name) + '</b>' +
+        '<span>' + f.size_h + '</span></div></div>';
+    }).join('') + '</div>';
+  } else {
+    html += slice.map(f => {
+      const j = f.src.lastIndexOf('/');
+      const ext = f.src.split('.').pop().slice(0, 5).toUpperCase();
+      return '<div class="qrow">' + qThumb(f, ext, 'thumb') +
+        '<div class="pathwrap"><div class="p"><span class="dir">' +
+          esc(f.src.slice(0, j + 1)) + '</span><span class="name">' +
+          esc(f.src.slice(j + 1)) + '</span></div>' +
+        '<div class="meta">' + f.size_h + ' · ย้ายมาจากตำแหน่งนี้</div></div>' +
+        '<button class="btn sm quiet" onclick="fetch(\'/api/reveal?path=' +
+          encodeURIComponent(f.dst) + '\')">Finder ↗</button>' +
+        '<button class="btn sm" onclick="undoOne(' + i + ',' + jsq(f.dst) + ')">คืนกลับ</button>' +
+        '</div>';
+    }).join('');
+  }
+  if (live.length > shown)
+    html += '<div class="qmore"><button class="btn" onclick="qMore(' + i + ')">ดูเพิ่มอีก ' +
+      Math.min(QCAP, live.length - shown) + ' ไฟล์</button></div>';
+
+  box.innerHTML = html;
+  lazyThumbs();
+}
+
+function qThumb(f, ext, cls) {
+  const url = '/api/file?path=' + encodeURIComponent(f.dst);
+  if (!f.thumb) return '<div class="' + cls + '" onclick="window.open(\'' + url +
+    '\')">' + esc(ext) + '</div>';
+  return '<img class="' + cls + '" data-src="/api/thumb?path=' + encodeURIComponent(f.dst) +
+    '" onerror="this.replaceWith(cellIcon(\'' + esc(ext) + '\',\'' + cls + '\'))"' +
+    ' onclick="window.open(\'' + url + '\')">';
+}
+
+function emptyText() {
+  if (!INDEXED) return '<b>ยังไม่ได้สแกน</b>เลือกโฟลเดอร์ด้านบนแล้วกด “เริ่มสแกน”';
+  if ($('q').value.trim()) return '<b>ไม่มีกลุ่มที่ตรงกับตัวกรอง</b>ลองล้างช่องค้นหาบนแถบด้านบน';
+  return '<b>ไม่พบไฟล์ซ้ำเลย</b>ทุกไฟล์ในโฟลเดอร์นี้มีเนื้อไฟล์ไม่ซ้ำกัน';
+}
+
+/* ทาสีทีละกลุ่ม: ตัวที่ติ๊ก = จะถูกย้าย, ตัวที่เหลือในกลุ่มเดียวกัน = เก็บไว้
+   ทำให้เห็นทันทีว่ากดแล้วจะเหลืออะไร โดยไม่ต้องไล่อ่านทีละบรรทัด */
+function paintGroups() {
+  document.querySelectorAll('.grp').forEach(g => {
+    const rows = [...g.querySelectorAll('.f')];
+    const anySel = rows.some(r => SEL.has(r.dataset.path));
+    for (const r of rows) {
+      const sel = SEL.has(r.dataset.path);
+      r.classList.toggle('sel', sel);
+      r.classList.toggle('keep', anySel && !sel);
+    }
+  });
+}
+
+function cellIcon(ext, cls) {
+  const d = document.createElement('div');
+  d.className = cls; d.textContent = ext;
+  return d;
+}
+
+async function undoOne(i, dst) {
+  const b = QB[i];
+  const r = await api('/api/undo', {batch: b.batch, root: b.root, paths: [dst]});
+  if (r.error) toast(r.error, 'bad');
+  else if (r.failed.length) toast('คืนกลับไม่สำเร็จ: ' + r.failed[0].error, 'bad');
+  else toast('คืนกลับที่เดิมแล้ว 1 ไฟล์', 'ok');
+  loadBatches();
+  reload(OFFSET);
+}
+
+async function undo(i) {
+  const b = QB[i];
+  if (!confirm('คืนไฟล์ทั้งชุด ' + b.batch + ' กลับที่เดิม?')) return;
+  const r = await api('/api/undo', {batch: b.batch, root: b.root});
+  toast(r.error ? r.error
+        : 'คืนกลับแล้ว ' + r.restored + ' ไฟล์' +
+          (r.failed.length ? ' · ล้มเหลว ' + r.failed.length + ' ไฟล์' : ''),
+        r.error ? 'bad' : 'ok');
+  loadBatches();
+  reload(OFFSET);
+}
+
+async function purge(i) {
+  const b = QB[i];
+  if (!confirm('ลบชุด ' + b.batch + ' อย่างถาวร?\n\n' + b.root + '\n\nกู้คืนไม่ได้อีกแล้วนะครับ')) return;
+  const r = await api('/api/purge', {batch: b.batch, root: b.root});
+  toast(r.error || 'ลบชุด ' + b.batch + ' ถาวรแล้ว', r.error ? 'bad' : 'ok');
+  loadBatches();
+}
+
+// ---- ตามหาถังพักที่ค้างอยู่ ----
+async function findQ() {
+  $('findOut').innerHTML = '<div class="meta" style="margin-top:16px">กำลังค้นหา…</div>';
+  const r = await api('/api/find_quarantine?path=' + encodeURIComponent($('findPath').value.trim()));
+  if (!r.length) {
+    $('findOut').innerHTML = '<div class="meta" style="margin-top:16px">ไม่เจอถังพักไฟล์ในโฟลเดอร์นี้</div>';
+    return;
+  }
+  const orphans = r.filter(x => x.orphan);
+  $('findOut').innerHTML = '<div style="margin-top:16px;border-top:1px solid var(--outline)">' +
+    r.map(x =>
+      '<div class="qrow"><div class="pathwrap">' +
+        '<div class="p"><span class="name">' + esc(x.dir) + '</span></div>' +
+        '<div class="row" style="gap:6px;margin-top:4px">' +
+          '<span class="meta">' + x.files + ' ไฟล์ · ' + x.bytes_h + '</span>' +
+          (x.manifest ? badge('integrated', 'มี manifest')
+                      : badge('planned', 'กู้จากโครงสร้างโฟลเดอร์')) +
+          (x.orphan ? badge('mock', 'ระบบยังไม่รู้จัก') : badge('production', 'อยู่ในบัญชีแล้ว')) +
+        '</div></div>' +
+      (x.orphan ? '<button class="btn sm primary" onclick="adopt([' + jsq(x.dir) +
+        '])">ดึงกลับเข้าระบบ</button>' : '') +
+      '</div>').join('') +
+    (orphans.length > 1 ? '<div class="qmore"><button class="btn primary" onclick="adopt(' +
+      jsq(orphans.map(o => o.dir)).replace(/&quot;/g, '&quot;') +
+      ')">ดึงกลับทั้งหมด ' + orphans.length + ' ชุด</button></div>' : '') +
+    '</div>';
+}
+
+async function adopt(dirs) {
+  const r = await api('/api/adopt', {dirs});
+  toast('ดึงกลับเข้าระบบแล้ว ' + r.added + ' ไฟล์', 'ok');
+  findQ();
+  loadBatches();
+}
+
+// ------------------------------------------------------------------ เริ่ม
+(async () => {
+  const s = await api('/api/state');
+  $('root').value = s.root || '';
+  INDEXED = s.indexed || 0;
+  $('sIndexed').textContent = INDEXED.toLocaleString();
+  if (s.min_size) $('minsize').value = String(s.min_size);
+  if (s.running) poll(); else reload(0);
+})();
+</script>
+</body>
+</html>

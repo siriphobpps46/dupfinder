@@ -1,0 +1,10 @@
+# ดัชนีการสแกน, บัญชีถังพักไฟล์, แคช thumbnail — เป็นข้อมูลเฉพาะเครื่อง
+.state/
+
+# ห้ามเผลอ commit ถังพักไฟล์ ถ้ามีใครรันโปรแกรมในโฟลเดอร์นี้
+_DUPFINDER_QUARANTINE/
+
+__pycache__/
+*.py[cod]
+.DS_Store
+Thumbs.db
