@@ -204,6 +204,9 @@ pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
   --add-data "index.html:." dupfinder.py
 ```
 
+อยากให้เป็นหน้าต่างแอปจริงแทนเบราว์เซอร์ ลง `pywebview` ก่อน build
+(`pip install pywebview`) — ถ้าไม่มีจะถอยไปเปิดเบราว์เซอร์ให้แทน
+
 ได้ `dist/dupfinder.app` ดับเบิลคลิกได้เลย ตอนเป็น bundle จะย้าย state ไป
 `~/Library/Application Support/dupfinder` เพราะ bundle เขียนไม่ได้
 ยังไม่ได้ sign เปิดครั้งแรกต้องคลิกขวา → Open

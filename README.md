@@ -179,6 +179,9 @@ pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
   --add-data "index.html:." dupfinder.py
 ```
 
+For a native window instead of the browser, add `pywebview` before building
+(`pip install pywebview`) — the app falls back to the browser without it.
+
 `dist/dupfinder.app` then runs on its own. When frozen, state moves to
 `~/Library/Application Support/dupfinder` (`~/.dupfinder` elsewhere) since the
 bundle is read-only. Unsigned, so the first launch needs right-click → Open.

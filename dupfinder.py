@@ -1150,6 +1150,17 @@ class Handler(BaseHTTPRequestHandler):
         return emptied
 
 
+def _desktop_window(url):
+    """หน้าต่างจริงของระบบ (WKWebView บน macOS) — optional, มีเฉพาะใน .app"""
+    try:
+        import webview
+    except ImportError:
+        return False
+    webview.create_window("dupfinder", url, width=1340, height=900, min_size=(900, 600))
+    webview.start()
+    return True
+
+
 def _status_window(url):
     import tkinter as tk
     root = tk.Tk()
@@ -1192,17 +1203,20 @@ def main():
                  "บัญชีถังพักไฟล์:  %s  (ห้ามลบ)" % LEDGER_DB,
                  "กด Ctrl-C เพื่อปิด"):
         print(line, flush=True)
+    if FROZEN:
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        if _desktop_window(url):
+            return
+        # ไม่มี pywebview ก็ถอยไปใช้เบราว์เซอร์ + หน้าต่างสถานะ (.app ที่ไม่เปิด
+        # หน้าต่างเลยจะเด้งค้างใน Dock เพราะ macOS รอให้มันลงทะเบียน window server)
+        webbrowser.open(url)
+        _status_window(url)
+        return
     if not args.no_open:
         try:
             webbrowser.open(url)
         except Exception:
             pass
-    if FROZEN:
-        # .app ที่ไม่เปิดหน้าต่างเลยจะเด้งค้างอยู่ใน Dock เพราะ macOS รอให้มัน
-        # ลงทะเบียนกับ window server — หน้าต่างเล็กๆ นี้แก้ทั้งอาการเด้งและให้ปุ่มปิด
-        threading.Thread(target=httpd.serve_forever, daemon=True).start()
-        _status_window(url)
-        return
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
