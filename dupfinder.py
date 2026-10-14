@@ -32,8 +32,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 IS_MAC = sys.platform == "darwin"
 IS_WIN = os.name == "nt"
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-STATE_DIR = os.path.join(HERE, ".state")
+FROZEN = getattr(sys, "frozen", False)
+# index.html อยู่ข้างสคริปต์ หรืออยู่ใน bundle ตอนถูกแพ็กเป็น .app
+HERE = sys._MEIPASS if FROZEN else os.path.dirname(os.path.abspath(__file__))
+# bundle เขียนไม่ได้ ตอน frozen เลยย้าย state ไปที่บ้านผู้ใช้
+STATE_DIR = os.path.join(HERE, ".state") if not FROZEN else os.path.expanduser(
+    "~/Library/Application Support/dupfinder" if IS_MAC else "~/.dupfinder")
 # ดัชนีการสแกน = ทิ้งได้ สร้างใหม่ได้เสมอ
 INDEX_DB = os.path.join(STATE_DIR, "index.db")
 # บัญชีถังพักไฟล์ = ของมีค่า ห้ามลบ เพราะมันคือแผนที่ว่าไฟล์ไหนถูกย้ายมาจากไหน

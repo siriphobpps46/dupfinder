@@ -194,6 +194,19 @@ Thumbnail เป็นของเสริมล้วนๆ ไม่มีก
 - เลือกอัตโนมัติทำทีละหน้า ตามที่ตั้งใจออกแบบไว้
 - ไม่ได้ออกแบบให้เปิดออกเน็ตเวิร์ก เป็นเครื่องมือใช้คนเดียวในเครื่อง ไม่มีระบบล็อกอิน
 
+## ทำเป็นแอปเดี่ยว
+
+เครื่องไม่มี Python? แพ็กเป็น bundle (~10 MB):
+
+```bash
+pip install pyinstaller
+pyinstaller --noconfirm --windowed --name dupfinder --add-data "index.html:." dupfinder.py
+```
+
+ได้ `dist/dupfinder.app` ดับเบิลคลิกได้เลย ตอนเป็น bundle จะย้าย state ไป
+`~/Library/Application Support/dupfinder` เพราะ bundle เขียนไม่ได้
+ยังไม่ได้ sign เปิดครั้งแรกต้องคลิกขวา → Open
+
 ## License
 
 MIT — ดู [LICENSE](LICENSE)
