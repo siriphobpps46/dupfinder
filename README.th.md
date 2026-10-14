@@ -200,7 +200,8 @@ Thumbnail เป็นของเสริมล้วนๆ ไม่มีก
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name dupfinder --add-data "index.html:." dupfinder.py
+pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
+  --add-data "index.html:." dupfinder.py
 ```
 
 ได้ `dist/dupfinder.app` ดับเบิลคลิกได้เลย ตอนเป็น bundle จะย้าย state ไป

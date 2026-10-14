@@ -175,7 +175,8 @@ No Python on the machine? Build a self-contained bundle (~10 MB):
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name dupfinder --add-data "index.html:." dupfinder.py
+pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
+  --add-data "index.html:." dupfinder.py
 ```
 
 `dist/dupfinder.app` then runs on its own. When frozen, state moves to
