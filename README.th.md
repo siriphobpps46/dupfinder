@@ -1,4 +1,4 @@
-# dupfinder
+# SiriFinder
 
 หาไฟล์ที่ **เนื้อไฟล์ซ้ำกันเป๊ะ** (ไม่ดูชื่อ) แล้วรีวิว/ลบผ่านหน้าเว็บในเครื่อง
 ใช้ Python stdlib ล้วน ไม่ต้อง `pip install` อะไรเลย
@@ -23,7 +23,7 @@
 ## วิธีใช้
 
 ```bash
-python3 dupfinder.py
+python3 sirifinder.py
 ```
 
 เปิดเบราว์เซอร์ให้อัตโนมัติที่ http://127.0.0.1:8777
@@ -125,7 +125,7 @@ UI เวอร์ชันเก่าที่ยิง payload คนละ�
 
 ## ความปลอดภัย
 
-- **ไม่มีการ `rm` ใดๆ** ปุ่มลบคือการ *ย้าย* ไปที่ `<root>/_DUPFINDER_QUARANTINE/<วันเวลา>/`
+- **ไม่มีการ `rm` ใดๆ** ปุ่มลบคือการ *ย้าย* ไปที่ `<root>/_SIRIFINDER_QUARANTINE/<วันเวลา>/`
   โดยคงโครงสร้างโฟลเดอร์เดิมไว้ (ย้ายในไดรฟ์เดียวกัน = แค่ขยับ metadata เร็วมาก)
 - กด **คืนกลับที่เดิม** ในแท็บถังพักไฟล์ เพื่อย้ายกลับได้ทั้งชุด หรือทีละไฟล์ก็ได้
 - ลบถาวรจริงๆ ต้องกด **Delete permanently** ในแท็บ Quarantine อีกที
@@ -154,7 +154,7 @@ UI เวอร์ชันเก่าที่ยิง payload คนละ�
 ## กู้ถังพักไฟล์ที่ค้างอยู่
 
 ในแท็บถังพักไฟล์มีกล่อง **“ถังพักไฟล์ที่ค้างอยู่”** — เลือกโฟลเดอร์แล้วกด **ค้นหา**
-มันจะไล่หา `_DUPFINDER_QUARANTINE` (ลึกไม่เกิน 6 ชั้น) แล้วบอกว่าชุดไหนระบบยังไม่รู้จัก
+มันจะไล่หา `_SIRIFINDER_QUARANTINE` (ลึกไม่เกิน 6 ชั้น) แล้วบอกว่าชุดไหนระบบยังไม่รู้จัก
 กด **ดึงกลับเข้าระบบ** เพื่อเอาเข้าบัญชี แล้วคืนไฟล์กลับที่เดิมได้ตามปกติ
 
 ใช้ `manifest.json` ถ้ามี ถ้าไม่มี (ถังที่สร้างจากเวอร์ชันเก่า) ก็ยังกู้ได้
@@ -200,15 +200,15 @@ Thumbnail เป็นของเสริมล้วนๆ ไม่มีก
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
-  --add-data "index.html:." dupfinder.py
+pyinstaller --noconfirm --windowed --name SiriFinder --icon assets/logo/icon.icns \
+  --add-data "index.html:." sirifinder.py
 ```
 
 อยากให้เป็นหน้าต่างแอปจริงแทนเบราว์เซอร์ ลง `pywebview` ก่อน build
 (`pip install pywebview`) — ถ้าไม่มีจะถอยไปเปิดเบราว์เซอร์ให้แทน
 
-ได้ `dist/dupfinder.app` ดับเบิลคลิกได้เลย ตอนเป็น bundle จะย้าย state ไป
-`~/Library/Application Support/dupfinder` เพราะ bundle เขียนไม่ได้
+ได้ `dist/SiriFinder.app` ดับเบิลคลิกได้เลย ตอนเป็น bundle จะย้าย state ไป
+`~/Library/Application Support/sirifinder` เพราะ bundle เขียนไม่ได้
 ยังไม่ได้ sign เปิดครั้งแรกต้องคลิกขวา → Open
 
 ## License

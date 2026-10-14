@@ -1,4 +1,4 @@
-# dupfinder
+# SiriFinder
 
 Find **byte-identical duplicate files** and review them in a local web UI before
 deleting anything. Pure Python standard library — no `pip install`, no build step.
@@ -18,7 +18,7 @@ and every move is undoable.
 ## Quick start
 
 ```bash
-python3 dupfinder.py
+python3 sirifinder.py
 ```
 
 Opens `http://127.0.0.1:8777` in your browser. Pick a folder, scan, review, delete.
@@ -50,7 +50,7 @@ per file or per batch:
 ## Why not just compare filenames?
 
 Because copies get renamed. `IMG_0421.JPG`, `IMG_0421 copy.JPG`, and
-`photo-final-v2.jpg` can be the same 4 MB of bytes. dupfinder compares content.
+`photo-final-v2.jpg` can be the same 4 MB of bytes. sirifinder compares content.
 
 ## How the scan works
 
@@ -86,7 +86,7 @@ about 15 seconds, because only 227 files needed a full hash.
 This is a tool that deletes things, so the defaults are deliberately timid.
 
 - **Nothing is ever unlinked by the delete button.** Files are *moved* to
-  `<scan folder>/_DUPFINDER_QUARANTINE/<timestamp>/`, keeping their original
+  `<scan folder>/_SIRIFINDER_QUARANTINE/<timestamp>/`, keeping their original
   directory structure. On the same volume this is a metadata rename — instant,
   even for gigabytes.
 - **Undo restores a whole batch or a single file** to exactly where it came from.
@@ -109,7 +109,7 @@ describe themselves even if that database is deleted, or the drive is moved to
 another machine.
 
 The Quarantine tab has a **"find orphaned quarantines"** search that scans for
-`_DUPFINDER_QUARANTINE` folders and adopts them back into the ledger. It works
+`_SIRIFINDER_QUARANTINE` folders and adopts them back into the ledger. It works
 with or without a manifest — the folder layout inside a batch already mirrors
 the original paths.
 
@@ -175,15 +175,15 @@ No Python on the machine? Build a self-contained bundle (~10 MB):
 
 ```bash
 pip install pyinstaller
-pyinstaller --noconfirm --windowed --name dupfinder --icon icon.icns \
-  --add-data "index.html:." dupfinder.py
+pyinstaller --noconfirm --windowed --name SiriFinder --icon assets/logo/icon.icns \
+  --add-data "index.html:." sirifinder.py
 ```
 
 For a native window instead of the browser, add `pywebview` before building
 (`pip install pywebview`) — the app falls back to the browser without it.
 
-`dist/dupfinder.app` then runs on its own. When frozen, state moves to
-`~/Library/Application Support/dupfinder` (`~/.dupfinder` elsewhere) since the
+`dist/SiriFinder.app` then runs on its own. When frozen, state moves to
+`~/Library/Application Support/sirifinder` (`~/.sirifinder` elsewhere) since the
 bundle is read-only. Unsigned, so the first launch needs right-click → Open.
 
 ## License

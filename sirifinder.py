@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-dupfinder - หาไฟล์ที่เนื้อไฟล์ซ้ำกันเป๊ะ แล้วรีวิว/ลบผ่านหน้าเว็บในเครื่อง
+sirifinder - หาไฟล์ที่เนื้อไฟล์ซ้ำกันเป๊ะ แล้วรีวิว/ลบผ่านหน้าเว็บในเครื่อง
 
 วิธีใช้:
-    python3 dupfinder.py                    # เปิด UI ที่ http://127.0.0.1:8777
-    python3 dupfinder.py --port 9000        # เปลี่ยนพอร์ต
-    python3 dupfinder.py --root ~/Pictures  # ตั้งโฟลเดอร์เริ่มต้น
-    python3 dupfinder.py --no-open          # ไม่ต้องเปิดเบราว์เซอร์ให้
+    python3 sirifinder.py                    # เปิด UI ที่ http://127.0.0.1:8777
+    python3 sirifinder.py --port 9000        # เปลี่ยนพอร์ต
+    python3 sirifinder.py --root ~/Pictures  # ตั้งโฟลเดอร์เริ่มต้น
+    python3 sirifinder.py --no-open          # ไม่ต้องเปิดเบราว์เซอร์ให้
 
 ใช้ Python stdlib ล้วน ไม่ต้องลงอะไรเพิ่ม ปุ่มลบไม่ได้ลบจริง แต่ย้ายไปถังพักไฟล์
 บนไดรฟ์เดียวกัน และกดคืนกลับได้
@@ -37,13 +37,13 @@ FROZEN = getattr(sys, "frozen", False)
 HERE = sys._MEIPASS if FROZEN else os.path.dirname(os.path.abspath(__file__))
 # bundle เขียนไม่ได้ ตอน frozen เลยย้าย state ไปที่บ้านผู้ใช้
 STATE_DIR = os.path.join(HERE, ".state") if not FROZEN else os.path.expanduser(
-    "~/Library/Application Support/dupfinder" if IS_MAC else "~/.dupfinder")
+    "~/Library/Application Support/sirifinder" if IS_MAC else "~/.sirifinder")
 # ดัชนีการสแกน = ทิ้งได้ สร้างใหม่ได้เสมอ
 INDEX_DB = os.path.join(STATE_DIR, "index.db")
 # บัญชีถังพักไฟล์ = ของมีค่า ห้ามลบ เพราะมันคือแผนที่ว่าไฟล์ไหนถูกย้ายมาจากไหน
 LEDGER_DB = os.path.join(STATE_DIR, "ledger.db")
 THUMB_DIR = os.path.join(STATE_DIR, "thumbs")
-QUARANTINE_NAME = "_DUPFINDER_QUARANTINE"
+QUARANTINE_NAME = "_SIRIFINDER_QUARANTINE"
 MANIFEST_NAME = "manifest.json"
 
 PARTIAL_BYTES = 65536
@@ -77,7 +77,7 @@ def connect():
     แยกเป็นสองไฟล์เพื่อให้ล้างดัชนีทิ้งได้โดยไม่แตะบัญชีถังพักไฟล์
     """
     os.makedirs(STATE_DIR, exist_ok=True)
-    legacy = os.path.join(STATE_DIR, "dupfinder.db")
+    legacy = os.path.join(STATE_DIR, "sirifinder.db")
     if os.path.exists(legacy) and not os.path.exists(INDEX_DB):
         for suf in ("", "-wal", "-shm"):
             if os.path.exists(legacy + suf):
@@ -399,7 +399,7 @@ def write_manifest(bdir, batch, root, entries):
     ถ้า ledger หายไป (โดนลบ, ย้ายเครื่อง, ก็อปไดรฟ์) ไฟล์พวกนี้ยังบอกตัวเองได้ว่า
     เคยอยู่ตรงไหน เลยดึงกลับเข้าระบบได้เสมอ
     """
-    data = {"tool": "dupfinder", "version": 1, "batch": batch, "root": root,
+    data = {"tool": "sirifinder", "version": 1, "batch": batch, "root": root,
             "updated": time.time(), "entries": entries}
     tmp = os.path.join(bdir, MANIFEST_NAME + ".tmp")
     try:
@@ -414,7 +414,7 @@ def read_manifest(bdir):
     try:
         with open(os.path.join(bdir, MANIFEST_NAME), encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) and data.get("tool") == "dupfinder" else None
+        return data if isinstance(data, dict) and data.get("tool") == "sirifinder" else None
     except Exception:
         return None
 
@@ -444,7 +444,7 @@ def sync_manifest(con, batch, root):
 # ---- ย้าย / คืน / ลบถาวร -------------------------------------------------
 
 def move_to_quarantine(con, paths):
-    """ย้ายไฟล์ไป <root>/_DUPFINDER_QUARANTINE/<วันเวลา>/<path เดิม>"""
+    """ย้ายไฟล์ไป <root>/_SIRIFINDER_QUARANTINE/<วันเวลา>/<path เดิม>"""
     root = meta_get(con, "root") or "/"
     batch = time.strftime("%Y-%m-%d_%H%M%S")
     base = batch_dir(root, batch)
@@ -582,7 +582,7 @@ def _prune_empty(base):
                 os.rmdir(dirpath)
         except OSError:
             pass
-    try:                                   # เก็บ _DUPFINDER_QUARANTINE ด้วยถ้าว่างแล้ว
+    try:                                   # เก็บ _SIRIFINDER_QUARANTINE ด้วยถ้าว่างแล้ว
         parent = os.path.dirname(base.rstrip("/\\"))
         if os.path.basename(parent) == QUARANTINE_NAME and not os.listdir(parent):
             os.rmdir(parent)
@@ -914,7 +914,7 @@ def reveal_in_file_manager(path):
 # ---------------------------------------------------------------------- server
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "dupfinder"
+    server_version = "SiriFinder"
 
     def log_message(self, fmt, *args):
         pass
@@ -1156,7 +1156,7 @@ def _desktop_window(url):
         import webview
     except ImportError:
         return False
-    webview.create_window("dupfinder", url, width=1340, height=900, min_size=(900, 600))
+    webview.create_window("SiriFinder", url, width=1340, height=900, min_size=(900, 600))
     webview.start()
     return True
 
@@ -1164,8 +1164,8 @@ def _desktop_window(url):
 def _status_window(url):
     import tkinter as tk
     root = tk.Tk()
-    root.title("dupfinder")
-    tk.Label(root, text="dupfinder กำลังทำงาน", font=("", 17, "bold")).pack(padx=46, pady=(26, 2))
+    root.title("SiriFinder")
+    tk.Label(root, text="SiriFinder กำลังทำงาน", font=("", 17, "bold")).pack(padx=46, pady=(26, 2))
     tk.Label(root, text=url, fg="#777").pack()
     tk.Button(root, text="เปิดในเบราว์เซอร์",
               command=lambda: webbrowser.open(url)).pack(pady=(16, 4))
@@ -1197,7 +1197,7 @@ def main():
 
     url = "http://127.0.0.1:%d" % args.port
     # flush ทุกบรรทัด ไม่งั้นตอน redirect หรือรันเป็น service จะไม่เห็นอะไรเลย
-    for line in ("dupfinder เปิดที่ %s" % url,
+    for line in ("SiriFinder เปิดที่ %s" % url,
                  "โฟลเดอร์เริ่มต้น: %s" % default_root,
                  "ถังพักไฟล์:       <โฟลเดอร์ที่สแกน>/%s" % QUARANTINE_NAME,
                  "บัญชีถังพักไฟล์:  %s  (ห้ามลบ)" % LEDGER_DB,
