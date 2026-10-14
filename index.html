@@ -5,610 +5,336 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SiriFinder — หาไฟล์ซ้ำ</title>
 <style>
-/* ============================================================
-   Burgundy Ops — deep charcoal workspace, wine accents.
-   Layout เดิม เปลี่ยนเฉพาะสีกับรายละเอียดการใช้งาน
-   ============================================================ */
+/* โทเคนชุดเดียวกับ SiriLoader — เปลี่ยนแค่ accent เป็น burgundy */
 :root{
-  /* ---- เทาเข้ม: ไล่จากมืดสุดไปอ่อนสุด ---- */
-  --bg:#161619;          /* พื้นหน้า */
-  --surface:#1e1e22;     /* การ์ด */
-  --surface-2:#26262c;   /* input, แถบเครื่องมือ */
-  --surface-3:#2f2f36;   /* hover */
-  --line:#33333b;
-  --line-strong:#45454f;
-  --fg:#eaeaec;
-  --fg-muted:#9b9ba6;
-  --fg-dim:#6f6f7a;
-
-  /* ---- shell: กระจกฝ้าเทาเข้ม ---- */
-  --shell:rgba(17,17,20,.74);
-  --shell-border:rgba(255,255,255,.07);
-  --shell-blur:14px;
-
-  /* ---- burgundy ---- */
-  --wine:#a32545;         /* สีหลัก */
-  --wine-strong:#bb2b50;  /* hover */
-  --wine-deep:#6d1428;    /* พื้นเข้ม */
-  --wine-tint:rgba(163,37,69,.12);
-  --wine-tint-2:rgba(163,37,69,.20);
-  --focus:#c1476a;
-  --on-wine:#ffffff;
-
-  /* ---- badge: ลดความสดให้เข้ากับโทนมืด ---- */
-  --ok-bg:rgba(52,199,123,.14);    --ok-fg:#5fd694;
-  --warn-bg:rgba(227,179,65,.14);  --warn-fg:#e3b341;
-  --gray-bg:rgba(255,255,255,.07); --gray-fg:#a8a8b3;
-  --info-bg:rgba(122,162,247,.14); --info-fg:#8ab4f8;
-  --plum-bg:rgba(205,143,168,.14); --plum-fg:#cd8fa8;
-
-  --r-xs:4px; --r-sm:6px; --r-md:8px; --r-lg:12px; --r-pill:9999px;
-  --fast:130ms; --normal:200ms; --slow:300ms;
-  --ease:cubic-bezier(.4,0,.2,1);
-  --sh-subtle:0 1px 2px rgba(0,0,0,.30);
-  --sh-raised:0 6px 18px rgba(0,0,0,.38);
-  --sh-dialog:0 24px 48px rgba(0,0,0,.55);
-
-  --header-h:64px; --side-w:256px; --side-collapsed:64px;
-  --sans:ui-sans-serif,system-ui,-apple-system,"Noto Sans Thai",sans-serif;
-  --mono:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+  --accent:#9b2343; --accent-hover:#7d1a35; --accent-soft:#f7e4e9; --accent-text:#8e2040;
+  --window:#ffffff; --chrome:#f6f6f8; --side:#f3f3f6;
+  --line:#e3e3e6; --row-line:#eeeef0;
+  --text:#1d1d1f; --muted:#8a8a8f;
+  --control:#ffffff; --control-line:#d0d0d6;
+  --hover:rgba(0,0,0,.05); --danger:#c0392b; --ok:#1c7f4e; --track:#e6e8ef;
+  color-scheme:light dark;
+  font:13px -apple-system,"SF Pro Text","Noto Sans Thai","Sukhumvit Set","Helvetica Neue",sans-serif;
+  color:var(--text); background:var(--window); -webkit-font-smoothing:antialiased;
 }
+@media (prefers-color-scheme:dark){:root{
+  --accent:#b8325a; --accent-hover:#c9436b; --accent-soft:rgba(200,80,110,.22); --accent-text:#e9a7b8;
+  --window:#1e1e20; --chrome:#2a2a2d; --side:#252528;
+  --line:#3a3a3e; --row-line:#2e2e31;
+  --text:#ececef; --muted:#8e8e94;
+  --control:#3a3a3e; --control-line:#4a4a4f;
+  --hover:rgba(255,255,255,.07); --danger:#ff6b5e; --ok:#5fd694; --track:#3a3a3e;
+}}
 *{box-sizing:border-box}
-html{font-size:16px}
-body{
-  margin:0; background:var(--bg); color:var(--fg);
-  font:400 .875rem/1.55 var(--sans);   /* 1.55 เผื่อสระบน-ล่างของไทย */
-  -webkit-font-smoothing:antialiased;
-}
-.canvas{
-  position:fixed; inset:0; z-index:0; pointer-events:none;
-  background:
-    radial-gradient(1000px 560px at 82% -10%, rgba(163,37,69,.16), transparent 60%),
-    radial-gradient(760px 480px at -6% 104%, rgba(109,20,40,.14), transparent 58%),
-    var(--bg);
-}
-.mono{font-family:var(--mono)}
-.muted{color:var(--fg-muted)}
+body{margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--window);cursor:default}
+button{font:inherit;color:inherit;border:0;background:none;cursor:default;padding:0}
+input,select{font:inherit;color:inherit}
+h1,h2,p{margin:0}
+:focus-visible{outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent);outline-offset:1px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.muted{color:var(--muted)}
 .hide{display:none!important}
 .grow{flex:1;min-width:0}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-::selection{background:var(--wine-tint-2);color:#fff}
+.row-f{display:flex;align-items:center;gap:8px}
 
-/* ---------------------------------------------------------- shell: header */
-.shell-header{
-  position:fixed; top:0; left:0; right:0; z-index:40; height:var(--header-h);
-  display:flex; align-items:center; gap:12px; padding:0 16px;
-  background:var(--shell); backdrop-filter:blur(var(--shell-blur));
-  -webkit-backdrop-filter:blur(var(--shell-blur));
-  border-bottom:1px solid var(--shell-border);
-}
-.brand{display:flex;align-items:center;gap:10px;min-width:0}
-.brand .mark{
-  width:30px;height:30px;flex:none;border-radius:var(--r-md);
-  background:linear-gradient(150deg,var(--wine-strong),var(--wine-deep));
-  display:flex;align-items:center;justify-content:center;
-  color:#fff;font-weight:700;font-size:.8125rem;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.16);
-}
-.brand b{font-size:.9375rem;font-weight:700;letter-spacing:-.01em;line-height:1.15;display:block}
-.brand span{
-  display:block;font-size:.6875rem;font-weight:600;letter-spacing:.08em;
-  text-transform:uppercase;color:var(--fg-dim);
-}
-.shell-search{
-  flex:1;max-width:520px;height:36px;padding:0 12px;
-  background:rgba(255,255,255,.05);color:var(--fg);
-  border:1px solid rgba(255,255,255,.09);border-radius:var(--r-sm);
-  font:400 .875rem/1.25rem var(--sans);outline:none;
-  transition:border-color var(--fast) var(--ease),background var(--fast) var(--ease);
-}
-.shell-search::placeholder{color:var(--fg-dim)}
-.shell-search:focus{border-color:var(--focus);background:rgba(255,255,255,.08)}
-.icon-btn{
-  height:36px;width:36px;flex:none;display:flex;align-items:center;justify-content:center;
-  background:transparent;border:none;border-radius:var(--r-md);cursor:pointer;
-  color:var(--fg-muted);transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
-}
-.icon-btn:hover{background:rgba(255,255,255,.07);color:var(--wine-strong)}
+/* ---- toolbar 52px ---- */
+.toolbar{height:52px;flex-shrink:0;display:flex;align-items:center;gap:10px;padding:0 12px;
+  background:var(--chrome);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:8px;width:188px;flex-shrink:0}
+.brand .mark{width:24px;height:24px;border-radius:6px;background:var(--accent);
+  display:grid;place-items:center;flex-shrink:0}
+.brand b{font-size:13px;font-weight:600}
+.search{flex:1;max-width:380px;height:28px;padding:0 10px;border-radius:7px;
+  background:var(--control);border:1px solid var(--control-line);outline:none}
+.search:focus{border-color:var(--accent)}
+.tool{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;
+  color:var(--muted);flex-shrink:0}
+.tool:hover{background:var(--hover);color:var(--text)}
 
-/* --------------------------------------------------------- shell: sidebar */
-.shell-side{
-  position:fixed; top:var(--header-h); bottom:0; left:0; z-index:35; width:var(--side-w);
-  display:flex; flex-direction:column; gap:3px; padding:16px;
-  background:var(--shell); backdrop-filter:blur(var(--shell-blur));
-  -webkit-backdrop-filter:blur(var(--shell-blur));
-  border-right:1px solid var(--shell-border);
-}
-.side-label{
-  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--fg-dim);padding:6px 12px 6px;
-}
-.nav-item{
-  display:flex;align-items:center;gap:10px;width:100%;
-  padding:0 12px;min-height:38px;border:none;border-radius:var(--r-md);
-  background:transparent;color:var(--fg-muted);
-  font:600 .8125rem/1rem var(--sans);text-align:left;cursor:pointer;
-  transition:background var(--fast) var(--ease),color var(--fast) var(--ease);
-}
-.nav-item svg{flex:none;width:16px;height:16px}
-.nav-item:hover{background:rgba(255,255,255,.05);color:var(--fg)}
-.nav-item.on{background:var(--wine);color:var(--on-wine);box-shadow:var(--sh-subtle)}
-.nav-item .pill{
-  margin-left:auto;font-size:.6875rem;font-weight:700;padding:1px 7px;border-radius:var(--r-pill);
-  background:rgba(255,255,255,.10);color:inherit;
-}
-.side-foot{
-  margin-top:auto;padding:12px;border-top:1px solid var(--shell-border);
-  font-size:.75rem;line-height:1.55;color:var(--fg-dim);
-}
-.side-foot b{color:var(--fg-muted);font-weight:600}
+/* ---- body / sidebar ---- */
+.body{flex:1;display:flex;min-height:0}
+.side{width:200px;flex-shrink:0;overflow-y:auto;background:var(--side);
+  border-right:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:1px}
+.side h6{font-size:11px;font-weight:600;color:var(--muted);padding:10px 10px 4px;margin:0}
+.item{display:flex;align-items:center;gap:8px;height:28px;padding:0 10px;border-radius:6px;
+  text-align:left;color:var(--text);width:100%}
+.item svg{color:var(--accent-text);flex-shrink:0}
+.item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item b{font-weight:500;font-size:12px;color:var(--muted)}
+.item:hover{background:var(--hover)}
+.item.on{background:var(--accent);color:#fff}
+.item.on svg,.item.on b{color:#fff}
+.side .foot{margin-top:auto;padding:10px;font-size:11px;line-height:1.6;color:var(--muted);
+  border-top:1px solid var(--line)}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.pane{flex:1;min-height:0;display:flex;flex-direction:column}
 
-/* ------------------------------------------------------------- workspace */
-.workspace{position:relative;z-index:1;margin-left:var(--side-w);padding-top:var(--header-h)}
-.container{max-width:1400px;margin:0 auto;padding:32px;padding-bottom:132px}
-.page-head{margin-bottom:24px}
-.page-head h1{margin:0;font-size:1.5rem;font-weight:700;line-height:2rem;letter-spacing:-.015em}
-.page-head p{margin:5px 0 0;color:var(--fg-muted)}
-.eyebrow{
-  font-size:.6875rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
-  color:var(--wine-strong);margin-bottom:7px;
-}
-section+section{margin-top:20px}
+/* ---- แถบบนของเนื้อหา ---- */
+.bar{display:flex;align-items:center;gap:8px;padding:8px 14px;flex-shrink:0;
+  border-bottom:1px solid var(--line);background:var(--chrome)}
+.bar.plain{background:var(--window)}
+.btn{height:28px;padding:0 12px;border-radius:7px;background:var(--control);
+  border:1px solid var(--control-line);white-space:nowrap}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.primary:hover{background:var(--accent-hover)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:500}
+.btn.quiet{background:none;border-color:transparent;color:var(--muted)}
+.btn.quiet:hover{background:var(--hover);color:var(--text)}
+.btn:disabled{opacity:.4}
+.btn.sm{height:26px;padding:0 9px}
+input.f,select.f{height:28px;padding:0 8px;border-radius:7px;background:var(--control);
+  border:1px solid var(--control-line);outline:none}
+input.f:focus,select.f:focus{border-color:var(--accent)}
+label.ck{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;margin:0}
+.lbl{font-size:11px;font-weight:600;color:var(--muted);flex-shrink:0}
 
-/* ------------------------------------------------------------------ card */
-.card{
-  background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:22px;box-shadow:var(--sh-subtle);
-}
-.card-title{font-size:1.0625rem;font-weight:700;line-height:1.6rem;margin:0}
-.card-sub{color:var(--fg-muted);margin:4px 0 0;font-size:.8125rem}
-.card-head{margin-bottom:16px}
+/* ---- ตัวเลขสรุป ---- */
+.metrics{display:flex;gap:28px;padding:12px 16px;flex-shrink:0;border-bottom:1px solid var(--line)}
+.metric .k{font-size:11px;font-weight:600;color:var(--muted)}
+.metric .v{font-size:19px;font-weight:600;margin-top:1px}
+.metric.hero .v{color:var(--accent-text)}
 
-/* ---------------------------------------------------------- metric cards */
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
-.metric{
-  background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-lg);padding:16px 20px;box-shadow:var(--sh-subtle);
-}
-.metric .k{
-  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--fg-dim);
-}
-.metric .v{font-size:1.75rem;font-weight:700;line-height:2.25rem;letter-spacing:-.025em;margin-top:2px}
-.metric.hero{
-  border-color:var(--wine-deep);
-  background:linear-gradient(140deg,var(--wine-tint),transparent 70%),var(--surface);
-}
-.metric.hero .k{color:var(--wine-strong)}
-.metric.hero .v{color:#f2c3ce;font-size:2rem;line-height:2.5rem}
+/* ---- progress ---- */
+.prog{padding:8px 16px;border-bottom:1px solid var(--line);flex-shrink:0}
+.track{height:4px;border-radius:2px;background:var(--track);overflow:hidden;margin-top:6px}
+.track i{display:block;height:100%;width:0;background:var(--accent);border-radius:2px;transition:width .3s}
 
-/* --------------------------------------------------------------- controls */
-.btn{
-  display:inline-flex;align-items:center;justify-content:center;gap:6px;
-  height:38px;padding:0 15px;border-radius:var(--r-sm);cursor:pointer;
-  background:var(--surface-2);color:var(--fg);border:1px solid var(--line-strong);
-  font:500 .875rem/1.25rem var(--sans);white-space:nowrap;
-  transition:background var(--fast) var(--ease),border-color var(--fast) var(--ease),
-             color var(--fast) var(--ease);
-}
-.btn:hover{background:var(--surface-3);border-color:var(--fg-dim)}
-/* ปุ่มหลัก = สว่าง เพราะ burgundy สงวนไว้ให้การกระทำที่ย้อนยาก */
-.btn.primary{background:var(--fg);border-color:var(--fg);color:var(--bg);font-weight:600}
-.btn.primary:hover{background:#fff;border-color:#fff;color:var(--bg)}
-.btn.danger{background:var(--wine);border-color:var(--wine);color:var(--on-wine);font-weight:600}
-.btn.danger:hover{background:var(--wine-strong);border-color:var(--wine-strong)}
-.btn.sm{height:30px;padding:0 11px;font-size:.8125rem}
-.btn.quiet{background:transparent;border-color:transparent;color:var(--fg-muted)}
-.btn.quiet:hover{background:var(--surface-2);color:var(--fg);border-color:transparent}
-.btn:disabled{opacity:.35;cursor:not-allowed}
-.btn:disabled:hover{background:var(--surface-2);border-color:var(--line-strong);color:var(--fg)}
-.btn.primary:disabled:hover{background:var(--fg);color:var(--bg)}
-.btn.danger:disabled:hover{background:var(--wine);border-color:var(--wine)}
-
-.container input:not([type=checkbox]),
-.sheet input:not([type=checkbox]),
-.container select{
-  height:38px;padding:0 12px;border-radius:var(--r-sm);
-  background:var(--surface-2);color:var(--fg);
-  border:1px solid var(--line-strong);font:400 .875rem/1.25rem var(--sans);outline:none;
-  transition:border-color var(--fast) var(--ease),box-shadow var(--fast) var(--ease);
-}
-.container input::placeholder,.sheet input::placeholder{color:var(--fg-dim)}
-.container input:not([type=checkbox]):focus,
-.sheet input:not([type=checkbox]):focus,
-.container select:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(193,71,106,.20)}
-.container select{cursor:pointer;padding-right:8px}
-label.check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--fg-muted)}
-input[type=checkbox]{accent-color:var(--wine);width:16px;height:16px;cursor:pointer}
-.field-label{
-  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--fg-dim);
-}
-.inline-field{display:flex;align-items:center;gap:8px;color:var(--fg-muted);font-size:.8125rem}
-
-/* --------------------------------------------------------------- telemetry */
-.bar{height:6px;background:var(--surface-2);border-radius:var(--r-pill);overflow:hidden}
-.bar>i{display:block;height:100%;width:0;border-radius:var(--r-pill);
-  background:linear-gradient(90deg,var(--wine-deep),var(--wine-strong));
-  transition:width var(--slow) var(--ease)}
-
-/* ------------------------------------------------------------------ badge */
-.badge{
-  display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:var(--r-pill);
-  font:600 .6875rem/1rem var(--sans);letter-spacing:.04em;white-space:nowrap;
-}
-.badge.production{background:var(--ok-bg);color:var(--ok-fg)}
-.badge.mock{background:var(--warn-bg);color:var(--warn-fg)}
-.badge.planned{background:var(--gray-bg);color:var(--gray-fg)}
-.badge.development{background:var(--info-bg);color:var(--info-fg)}
-.badge.integrated{background:var(--plum-bg);color:var(--plum-fg)}
-.badge.wine{background:var(--wine-tint-2);color:#eda3b6}
-
-/* ------------------------------------------------------- duplicate groups */
-.grp{
-  background:var(--surface);border:1px solid var(--line);
-  border-radius:var(--r-lg);box-shadow:var(--sh-subtle);overflow:hidden;margin-bottom:12px;
-}
-.grp>.hd{
-  display:flex;align-items:center;gap:10px;height:44px;padding:0 16px;
-  background:var(--wine-tint);border-bottom:1px solid var(--line);
-  font:600 .6875rem/1rem var(--sans);letter-spacing:.09em;text-transform:uppercase;
-  color:#eda3b6;
-}
-.grp>.hd .plain{color:var(--fg-muted);letter-spacing:0;text-transform:none;font-weight:400;
-  font-size:.8125rem}
-.grp>.hd .hash{margin-left:auto;color:var(--fg-dim);font-family:var(--mono);
-  letter-spacing:0;text-transform:none;font-weight:400}
-.f{display:flex;gap:12px;align-items:center;padding:9px 16px;cursor:pointer;
-  transition:background var(--fast) var(--ease),box-shadow var(--fast) var(--ease)}
-.f+.f{border-top:1px solid var(--line)}
-.f:hover{background:var(--surface-2)}
-.f.sel{background:var(--wine-tint);box-shadow:inset 3px 0 0 var(--wine)}
-.f.keep{box-shadow:inset 3px 0 0 var(--ok-fg)}
-.f input[type=checkbox]{width:17px;height:17px;flex:none}
-.thumb{
-  width:52px;height:52px;flex:none;border-radius:var(--r-md);object-fit:cover;
-  background:var(--surface-2);border:1px solid var(--line);cursor:zoom-in;
-  display:flex;align-items:center;justify-content:center;overflow:hidden;
-  font:600 .6875rem/1 var(--sans);letter-spacing:.05em;color:var(--fg-dim);
-}
+/* ---- รายการ (เลื่อนเฉพาะตรงนี้) ---- */
+.list{flex:1;overflow-y:auto;min-height:0}
+.grp{border-bottom:1px solid var(--line)}
+.grp>.hd{display:flex;align-items:center;gap:10px;padding:7px 16px;background:var(--chrome);
+  border-bottom:1px solid var(--row-line);font-size:11px;font-weight:600;color:var(--muted);
+  position:sticky;top:0;z-index:2}
+.grp>.hd .plain{font-weight:400}
+.grp>.hd .hash{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-weight:400;opacity:.7}
+.f{display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid var(--row-line)}
+.f:hover{background:var(--hover)}
+.f.sel{background:var(--accent-soft)}
+.f.keep{box-shadow:inset 2px 0 0 var(--ok)}
+.f.sel{box-shadow:inset 2px 0 0 var(--accent)}
+.f input[type=checkbox]{flex:none;width:15px;height:15px}
+.thumb{width:44px;height:44px;flex:none;border-radius:6px;object-fit:cover;background:var(--accent-soft);
+  display:grid;place-items:center;font-size:10px;font-weight:600;color:var(--accent-text);overflow:hidden}
 .pathwrap{flex:1;min-width:0}
-.p{font-family:var(--mono);font-size:.8125rem;line-height:1.45;word-break:break-all}
-.p .dir{color:var(--fg-dim)}
-.p .name{color:var(--fg);font-weight:600}
-.f.sel .p .name{color:#f2c3ce}
-.meta{font-size:.75rem;color:var(--fg-muted);margin-top:2px}
-.tag{font-size:.6875rem;font-weight:600;padding:2px 8px;border-radius:var(--r-pill);flex:none;display:none}
-.f.sel .tag.del{display:inline-block;background:var(--wine-tint-2);color:#eda3b6}
-.f.keep .tag.keep{display:inline-block;background:var(--ok-bg);color:var(--ok-fg)}
-/* ปุ่มรองโผล่ตอน hover เพื่อลดความรก แต่ยังเข้าถึงด้วยคีย์บอร์ดได้ */
-.f .btn.reveal{opacity:0;transition:opacity var(--fast) var(--ease)}
+.p{font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p .dir{color:var(--muted)}
+.p .name{font-weight:600}
+.meta{font-size:11px;color:var(--muted);margin-top:2px}
+.tag{font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;flex:none;display:none}
+.f.sel .tag.del{display:inline-block;background:var(--accent);color:#fff}
+.f.keep .tag.keep{display:inline-block;background:var(--accent-soft);color:var(--ok)}
+.f .btn.reveal{opacity:0}
 .f:hover .btn.reveal,.f:focus-within .btn.reveal{opacity:1}
-@media (hover:none){.f .btn.reveal{opacity:1}}
+.badge{display:inline-flex;align-items:center;padding:1px 8px;border-radius:99px;
+  font-size:11px;font-weight:600;background:var(--hover);color:var(--muted)}
+.badge.production{color:var(--ok)} .badge.mock{color:#9a6b00}
+.badge.wine,.badge.integrated{color:var(--accent-text)}
+.empty{padding:60px 24px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--text);font-size:14px;margin-bottom:4px}
+.skeleton{padding:16px}
+.skeleton i{display:block;height:10px;border-radius:3px;background:var(--hover);margin-bottom:9px}
+.pager{display:flex;gap:12px;align-items:center;justify-content:center;padding:14px}
+.card{padding:0}
 
-.empty{padding:44px 24px;text-align:center;color:var(--fg-muted)}
-.empty b{display:block;color:var(--fg);font-size:1rem;margin-bottom:4px}
-.skeleton{padding:18px}
-.skeleton i{display:block;height:12px;border-radius:var(--r-xs);background:var(--surface-2);
-  margin-bottom:10px;animation:pulse 1.3s var(--ease) infinite}
-.skeleton i:nth-child(2){width:72%} .skeleton i:nth-child(3){width:48%}
-@keyframes pulse{0%,100%{opacity:.45}50%{opacity:.9}}
-.pager{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:20px}
-
-/* ---------------------------------------------------------- quarantine */
-.qhead{display:flex;gap:12px;align-items:center;cursor:pointer;user-select:none}
-.qhead .caret{color:var(--fg-dim);font-size:16px;transition:transform var(--normal) var(--ease)}
+/* ---- ถังพักไฟล์ ---- */
+.qhead{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--row-line)}
+.qhead .caret{color:var(--muted);transition:transform .2s}
 .qhead.open .caret{transform:rotate(90deg)}
-.qbody{margin-top:16px;border-top:1px solid var(--line);padding-top:16px}
-.qtools{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-.seg{display:flex;border:1px solid var(--line-strong);border-radius:var(--r-sm);overflow:hidden}
-.seg button{border:none;background:transparent;cursor:pointer;padding:5px 13px;
-  font:500 .8125rem/1rem var(--sans);color:var(--fg-muted)}
-.seg button:hover{color:var(--fg);background:var(--surface-2)}
-.seg button.on{background:var(--wine);color:var(--on-wine);font-weight:600}
-.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
-.qcell{
-  background:var(--surface-2);border:1px solid var(--line);
-  border-radius:var(--r-md);overflow:hidden;
-  transition:border-color var(--fast) var(--ease),transform var(--fast) var(--ease);
-}
-.qcell:hover{border-color:var(--wine);transform:translateY(-1px)}
-.qcell .th{
-  width:100%;aspect-ratio:1;object-fit:cover;background:var(--surface-3);cursor:zoom-in;
-  display:flex;align-items:center;justify-content:center;
-  font:600 .75rem/1 var(--sans);letter-spacing:.05em;color:var(--fg-dim);
-}
-.qcell .cap{padding:7px 9px;font-size:.75rem;line-height:1.4;word-break:break-all}
-.qcell .cap b{display:block;font-weight:600;color:var(--fg)}
-.qcell .cap span{color:var(--fg-dim)}
-.qrow{display:flex;gap:12px;align-items:center;padding:9px 0}
-.qrow+.qrow{border-top:1px solid var(--line)}
-.qmore{text-align:center;padding-top:12px}
+.qbody{padding:12px 16px;border-bottom:1px solid var(--line);background:var(--chrome)}
+.qtools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.seg{display:flex;border:1px solid var(--control-line);border-radius:7px;overflow:hidden}
+.seg button{padding:4px 11px;font-size:12px;color:var(--muted)}
+.seg button.on{background:var(--accent);color:#fff;font-weight:500}
+.qgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.qcell{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--window)}
+.qcell .th{width:100%;aspect-ratio:1;object-fit:cover;background:var(--accent-soft);
+  display:grid;place-items:center;font-size:11px;color:var(--accent-text)}
+.qcell .cap{padding:6px 8px;font-size:11px;line-height:1.4;word-break:break-all}
+.qcell .cap b{display:block;font-weight:600}
+.qcell .cap span{color:var(--muted)}
+.qrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--row-line)}
+.qmore{text-align:center;padding-top:10px}
 
-/* ------------------------------------------------------------ action bar */
-.actionbar{
-  position:fixed;left:var(--side-w);right:0;bottom:0;z-index:38;
-  display:flex;align-items:center;gap:14px;padding:12px 32px;min-height:66px;
-  background:var(--shell);backdrop-filter:blur(var(--shell-blur));
-  -webkit-backdrop-filter:blur(var(--shell-blur));
-  border-top:1px solid var(--shell-border);
-}
-.actionbar .count{font-size:1.0625rem;font-weight:700;line-height:1.5rem}
-.actionbar .sub{font-size:.8125rem;color:var(--fg-muted)}
-.msg{font-size:.8125rem;color:var(--fg-muted)}
-.msg .bad{color:#eda3b6}
+/* ---- แถบล่าง ---- */
+.actionbar{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:0 14px;height:48px;
+  background:var(--chrome);border-top:1px solid var(--line)}
+.actionbar .count{font-weight:600}
+.msg{color:var(--muted);font-size:12px}
 
-/* ---------------------------------------------------------------- toast */
-.toasts{position:fixed;right:24px;bottom:86px;z-index:55;display:flex;
-  flex-direction:column;gap:8px;align-items:flex-end;pointer-events:none}
-.toast{
-  background:var(--surface);border:1px solid var(--line-strong);border-left:3px solid var(--fg-dim);
-  border-radius:var(--r-md);box-shadow:var(--sh-raised);padding:11px 16px;max-width:420px;
-  font-size:.8125rem;color:var(--fg);animation:slidein var(--normal) var(--ease);
-}
-.toast.ok{border-left-color:var(--ok-fg)}
-.toast.bad{border-left-color:var(--wine-strong)}
-@keyframes slidein{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-
-/* ----------------------------------------------------------------- picker */
-.modal{position:fixed;inset:0;z-index:60;background:rgba(8,8,10,.66);
-  backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:24px}
-.sheet{
-  background:var(--surface);border:1px solid var(--line-strong);
-  border-radius:var(--r-lg);box-shadow:var(--sh-dialog);
-  width:min(920px,100%);max-height:86vh;display:flex;flex-direction:column;overflow:hidden;
-}
-.sheet>.top{padding:16px 22px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center}
-.sheet>.top b{font-size:1.0625rem;font-weight:700}
-.sheet>.bot{padding:14px 22px;border-top:1px solid var(--line);background:var(--surface-2);
-  display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+/* ---- modal / toast ---- */
+.modal{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.35);
+  display:flex;align-items:center;justify-content:center;padding:24px}
+.sheet{background:var(--window);border:1px solid var(--line);border-radius:10px;
+  box-shadow:0 24px 48px rgba(0,0,0,.28);width:min(860px,100%);max-height:84vh;
+  display:flex;flex-direction:column;overflow:hidden}
+.sheet>.top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sheet>.top b{font-size:14px}
+.sheet>.bot{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid var(--line);
+  background:var(--chrome);flex-wrap:wrap}
 .pkbody{display:flex;flex:1;min-height:0}
-.pkside{width:214px;flex:none;border-right:1px solid var(--line);overflow-y:auto;padding:8px}
-.pkside .grp-label{
-  font-size:.6875rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;
-  color:var(--fg-dim);padding:10px 10px 4px;
-}
-.pkside button{
-  display:block;width:100%;text-align:left;background:none;border:none;cursor:pointer;
-  padding:7px 10px;border-radius:var(--r-sm);font:500 .8125rem/1.25rem var(--sans);
-  color:var(--fg-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-}
-.pkside button:hover{background:var(--wine-tint);color:#eda3b6}
+.pkside{width:190px;flex:none;border-right:1px solid var(--line);overflow-y:auto;padding:8px;background:var(--side)}
+.pkside .grp-label{font-size:11px;font-weight:600;color:var(--muted);padding:10px 10px 4px}
+.pkside button{display:block;width:100%;text-align:left;padding:5px 10px;border-radius:6px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pkside button:hover{background:var(--hover)}
 .pkmain{flex:1;min-width:0;display:flex;flex-direction:column}
-.crumbs{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;
-  flex-wrap:wrap;gap:2px;align-items:center;font-size:.8125rem}
-.crumbs button{background:none;border:none;cursor:pointer;padding:2px 6px;
-  border-radius:var(--r-xs);color:#eda3b6;font:500 .8125rem/1.25rem var(--sans)}
-.crumbs button:hover{background:var(--wine-tint)}
-.crumbs .sep{color:var(--fg-dim)}
-.pklist{flex:1;overflow-y:auto;padding:8px}
-.pklist button{
-  display:flex;gap:10px;align-items:center;width:100%;text-align:left;cursor:pointer;
-  background:none;border:none;padding:8px 12px;border-radius:var(--r-md);
-  font:400 .875rem/1.25rem var(--sans);color:var(--fg);
-}
-.pklist button:hover{background:var(--surface-2)}
-.pklist button.dim{color:var(--fg-dim)}
-.pklist .arrow{margin-left:auto;color:var(--fg-dim)}
-.err{color:#eda3b6}
-
-/* --------------------------------------------------------------- responsive */
-@media (max-width:1100px){
-  .shell-side{width:var(--side-collapsed);padding:16px 8px;align-items:center}
-  .shell-side .side-label,.shell-side .side-foot,.nav-item .txt,.nav-item .pill{display:none}
-  .nav-item{justify-content:center;padding:0}
-  .workspace{margin-left:var(--side-collapsed)}
-  .actionbar{left:var(--side-collapsed)}
-}
-@media (max-width:760px){
-  .shell-side{display:none}
-  .workspace{margin-left:0}
-  .actionbar{left:0;padding:12px 16px}
-  .container{padding:16px;padding-bottom:140px}
-  .brand span{display:none}
-  .pkside{display:none}
-  .toasts{right:12px;left:12px;bottom:92px;align-items:stretch}
-}
+.crumbs{display:flex;flex-wrap:wrap;gap:2px;align-items:center;padding:8px 12px;
+  border-bottom:1px solid var(--line);font-size:12px}
+.crumbs button{padding:2px 6px;border-radius:5px;color:var(--accent-text);font-weight:500}
+.crumbs button:hover{background:var(--hover)}
+.crumbs .sep{color:var(--muted)}
+.pklist{flex:1;overflow-y:auto;padding:6px}
+.pklist button{display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+  padding:7px 10px;border-radius:6px}
+.pklist button:hover{background:var(--hover)}
+.pklist button.dim{color:var(--muted)}
+.pklist .arrow{margin-left:auto;color:var(--muted)}
+.err{color:var(--danger)} .ok{color:var(--ok)}
+.toasts{position:fixed;right:16px;bottom:62px;z-index:55;display:flex;flex-direction:column;
+  gap:8px;align-items:flex-end;pointer-events:none}
+.toast{background:var(--window);border:1px solid var(--line);border-left:3px solid var(--muted);
+  border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:9px 14px;max-width:380px;font-size:12px}
+.toast.ok{border-left-color:var(--ok)} .toast.bad{border-left-color:var(--danger)}
 </style>
 </head>
 <body>
-<div class="canvas"></div>
 
-<!-- ============================ shell: header ============================ -->
-<header class="shell-header">
+<div class="toolbar">
   <div class="brand">
-    <div class="mark"><svg viewBox="0 0 1024 1024" width="19" height="19" fill="none" stroke="#fff" stroke-width="92" stroke-linecap="round"><g transform="translate(512 512) scale(.86) translate(-512 -512)"><g transform="translate(-118 0)" stroke-opacity=".35"><path d="M616 332 A120 120 0 1 0 512 512 A120 120 0 1 1 408 692"/></g><g transform="translate(118 0)"><path d="M616 332 A120 120 0 1 0 512 512 A120 120 0 1 1 408 692"/></g></g></svg></div>
-    <div>
-      <b>SiriFinder</b>
-      <span>duplicate control</span>
-    </div>
+    <div class="mark"><svg viewBox="0 0 1024 1024" width="15" height="15" fill="none"
+      stroke="#fff" stroke-width="98" stroke-linecap="round">
+      <g transform="translate(512 512) scale(.84) translate(-512 -512)">
+      <g transform="translate(-118 0)" stroke-opacity=".45"><path d="M616 332 A120 120 0 1 0 512 512 A120 120 0 1 1 408 692"/></g>
+      <g transform="translate(118 0)"><path d="M616 332 A120 120 0 1 0 512 512 A120 120 0 1 1 408 692"/></g></g></svg></div>
+    <b>SiriFinder</b>
   </div>
-  <input id="q" type="search" class="shell-search" placeholder="กรองด้วยบางส่วนของ path…"
+  <input id="q" type="search" class="search" placeholder="กรองด้วยบางส่วนของ path…"
          onkeydown="if(event.key==='Enter')reload(0)">
-  <button class="icon-btn" title="ใช้ตัวกรอง" onclick="reload(0)" aria-label="กรอง">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
-         stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+  <button class="tool" title="กรอง" onclick="reload(0)">
+    <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+         stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
   </button>
   <span id="hdrStatus"></span>
-</header>
+</div>
 
-<!-- =========================== shell: sidebar =========================== -->
-<aside class="shell-side">
-  <div class="side-label">workspace</div>
-  <button id="navScan" class="nav-item on" onclick="showTab('scan')">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
-         stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="6.8" cy="6.8" r="4.3"/><path d="M10 10 14 14"/></svg>
-    <span class="txt">สแกนและตรวจ</span>
-  </button>
-  <button id="navQ" class="nav-item" onclick="showTab('q')">
-    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"
-         stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1.8 4.6h12.4v8.1a1 1 0 0 1-1 1H2.8a1 1 0 0 1-1-1z"/>
-      <path d="M1.2 2.3h13.6v2.3H1.2zM6.3 7.7h3.4"/></svg>
-    <span class="txt">ถังพักไฟล์</span><span class="pill" id="navQCount"></span>
-  </button>
-  <div class="side-foot">
-    ปุ่มลบ<b> ย้ายไปถังพัก</b> ไม่ได้ลบจริง<br>คืนกลับได้ทุกไฟล์
-  </div>
-</aside>
-
-<!-- ============================== workspace ============================== -->
-<main class="workspace">
-<div class="container">
-
-<!-- ------------------------------ สแกน ------------------------------ -->
-<div id="paneScan">
-  <div class="page-head">
-    <div class="eyebrow">duplicate control</div>
-    <h1>สแกนและตรวจไฟล์ซ้ำ</h1>
-    <p>เทียบเนื้อไฟล์จริงแบบ byte-per-byte ไม่ได้ดูแค่ชื่อ</p>
+<div class="body">
+  <div class="side">
+    <h6>WORKSPACE</h6>
+    <button id="navScan" class="item on" onclick="showTab('scan')">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linecap="round"><circle cx="6.8" cy="6.8" r="4.3"/><path d="M10 10 14 14"/></svg>
+      <span>สแกนและตรวจ</span></button>
+    <button id="navQ" class="item" onclick="showTab('q')">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor"
+        stroke-width="1.6" stroke-linejoin="round"><path d="M1.8 4.6h12.4v8.1a1 1 0 0 1-1 1H2.8a1 1 0 0 1-1-1z"/>
+        <path d="M1.2 2.3h13.6v2.3H1.2zM6.3 7.7h3.4"/></svg>
+      <span>ถังพักไฟล์</span><b id="navQCount"></b></button>
+    <div class="foot">ปุ่มลบ <b style="color:var(--text)">ย้ายไปถังพัก</b><br>ไม่ได้ลบจริง คืนกลับได้</div>
   </div>
 
-  <section class="card">
-    <div class="card-head">
-      <h2 class="card-title">โฟลเดอร์ที่จะสแกน</h2>
-      <p class="card-sub">เลือกได้ทั้งไดรฟ์นอกและโฟลเดอร์ในเครื่อง · กด Enter ในช่องนี้เพื่อเริ่มสแกน</p>
-    </div>
-    <div class="row" style="flex-wrap:nowrap">
-      <input id="root" class="grow mono" placeholder="เช่น ~/Pictures หรือกดปุ่มเลือกโฟลเดอร์"
-             onkeydown="if(event.key==='Enter')startScan()">
-      <button class="btn" onclick="pkOpen('root')">เลือกโฟลเดอร์…</button>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <label class="inline-field"><span class="field-label">ข้ามไฟล์เล็กกว่า</span>
-        <select id="minsize">
-          <option value="0">ไม่จำกัด</option>
-          <option value="1024">1 KB</option>
-          <option value="4096" selected>4 KB</option>
-          <option value="1048576">1 MB</option>
+  <div class="main">
+    <!-- ---------------- สแกน ---------------- -->
+    <div id="paneScan" class="pane">
+      <div class="bar" id="scanFull">
+        <input id="root" class="f grow mono" placeholder="เช่น ~/Pictures หรือกดปุ่มเลือกโฟลเดอร์"
+               onkeydown="if(event.key==='Enter')startScan()">
+        <button class="btn" onclick="pkOpen('root')">เลือกโฟลเดอร์…</button>
+        <span class="lbl">ข้ามไฟล์เล็กกว่า</span>
+        <select id="minsize" class="f">
+          <option value="0">ไม่จำกัด</option><option value="1024">1 KB</option>
+          <option value="4096" selected>4 KB</option><option value="1048576">1 MB</option>
           <option value="10485760">10 MB</option>
         </select>
-      </label>
-      <label class="check"><input type="checkbox" id="hidden"> รวมไฟล์ซ่อน</label>
-      <div class="grow"></div>
-      <button id="btnScan" class="btn primary" onclick="startScan()">เริ่มสแกน</button>
-      <button id="btnCancel" class="btn danger hide" onclick="api('/api/cancel',{})">หยุดสแกน</button>
-    </div>
-    <div id="prog" class="hide" style="margin-top:16px">
-      <div class="row" style="margin-bottom:8px">
-        <span class="meta grow" id="progText" style="margin:0"></span>
-        <span class="meta mono" id="progPct" style="margin:0"></span>
+        <label class="ck"><input type="checkbox" id="hidden"> ไฟล์ซ่อน</label>
+        <button id="btnScan" class="btn primary" onclick="startScan()">เริ่มสแกน</button>
+        <button id="btnCancel" class="btn danger hide" onclick="api('/api/cancel',{})">หยุด</button>
       </div>
-      <div class="bar"><i id="progBar"></i></div>
-    </div>
-    <div id="scanErr" class="err" style="margin-top:10px"></div>
-  </section>
-
-  <section class="metrics">
-    <div class="metric"><div class="k">กลุ่มไฟล์ซ้ำ</div><div class="v" id="sGroups">–</div></div>
-    <div class="metric"><div class="k">ไฟล์ที่เกินมา</div><div class="v" id="sFiles">–</div></div>
-    <div class="metric hero"><div class="k">พื้นที่ที่กู้คืนได้</div><div class="v" id="sWaste">–</div></div>
-    <div class="metric"><div class="k">ไฟล์ที่ทำดัชนีไว้</div><div class="v" id="sIndexed">–</div></div>
-  </section>
-
-  <section class="card">
-    <div class="card-head row" style="flex-wrap:nowrap;align-items:flex-start">
-      <div class="grow">
-        <h2 class="card-title">เลือกอัตโนมัติ</h2>
-        <p class="card-sub">บอกว่าจะ <b>เก็บ</b> ตัวไหน แล้วระบบติ๊กที่เหลือให้ — เฉพาะกลุ่มในหน้านี้</p>
+      <div class="bar hide" id="scanSlim">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor"
+          stroke-width="1.5" style="color:var(--muted);flex:none"><path d="M1.5 4.2h4.6l1.2 1.5h7.2v7.6a1 1 0 0 1-1 1H2.5a1 1 0 0 1-1-1z"/></svg>
+        <span class="mono grow" id="slimPath" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <span class="muted" id="slimCount"></span>
+        <button class="btn sm" onclick="editScan()">สแกนใหม่</button>
       </div>
-      <div class="row" style="flex-wrap:nowrap">
-        <select id="sort" onchange="reload(0)">
-          <option value="waste">เสียพื้นที่มากสุด</option>
-          <option value="size">ไฟล์ใหญ่สุด</option>
-          <option value="count">ซ้ำเยอะสุด</option>
-          <option value="path">เรียงตาม path (A→Z)</option>
+      <div id="prog" class="prog hide">
+        <div class="row-f"><span class="meta grow" id="progText" style="margin:0"></span>
+          <span class="meta mono" id="progPct" style="margin:0"></span></div>
+        <div class="track"><i id="progBar"></i></div>
+      </div>
+      <div id="scanErr" class="err hide" style="padding:8px 16px"></div>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">กลุ่มไฟล์ซ้ำ</div><div class="v" id="sGroups">–</div></div>
+        <div class="metric"><div class="k">ไฟล์ที่เกินมา</div><div class="v" id="sFiles">–</div></div>
+        <div class="metric hero"><div class="k">พื้นที่ที่กู้คืนได้</div><div class="v" id="sWaste">–</div></div>
+      </div>
+      <span id="sIndexed" class="hide"></span>
+
+      <div class="bar plain">
+        <span class="lbl">เก็บ</span>
+        <select id="rule" class="f">
+          <option value="old">ตัวที่เก่าที่สุด</option><option value="new">ตัวที่ใหม่ที่สุด</option>
+          <option value="short">ตัวที่ path สั้นที่สุด</option>
+          <option value="prefer">ตัวที่อยู่ในโฟลเดอร์…</option>
         </select>
-        <select id="pagesize" onchange="reload(0)">
-          <option value="20">20 กลุ่ม/หน้า</option>
-          <option value="40" selected>40 กลุ่ม/หน้า</option>
-          <option value="100">100 กลุ่ม/หน้า</option>
-          <option value="200">200 กลุ่ม/หน้า</option>
+        <input id="prefer" class="f grow mono hide" placeholder="โฟลเดอร์ที่อยากเก็บไว้">
+        <button id="btnPrefPick" class="btn sm hide" onclick="pkOpen('prefer')">เลือก…</button>
+        <button class="btn sm" onclick="autoSelect()">ติ๊กตัวที่เหลือ</button>
+        <button class="btn sm quiet" onclick="clearSel()">ล้าง</button>
+        <div class="grow"></div>
+        <select id="sort" class="f" onchange="reload(0)">
+          <option value="waste">เสียพื้นที่มากสุด</option><option value="size">ไฟล์ใหญ่สุด</option>
+          <option value="count">ซ้ำเยอะสุด</option><option value="path">path (A→Z)</option>
+        </select>
+        <select id="pagesize" class="f" onchange="reload(0)">
+          <option value="20">20 /หน้า</option><option value="40" selected>40 /หน้า</option>
+          <option value="100">100 /หน้า</option><option value="200">200 /หน้า</option>
         </select>
       </div>
-    </div>
-    <div class="row">
-      <select id="rule">
-        <option value="old">เก็บตัวที่เก่าที่สุด</option>
-        <option value="new">เก็บตัวที่ใหม่ที่สุด</option>
-        <option value="short">เก็บตัวที่ path สั้นที่สุด</option>
-        <option value="prefer">เก็บตัวที่อยู่ในโฟลเดอร์ที่กำหนด…</option>
-      </select>
-      <input id="prefer" class="grow mono hide" placeholder="โฟลเดอร์ที่อยากเก็บไว้">
-      <button id="btnPrefPick" class="btn hide" onclick="pkOpen('prefer')">เลือกโฟลเดอร์…</button>
-      <button class="btn" onclick="autoSelect()">ติ๊กตัวที่เหลือ</button>
-      <button class="btn quiet" onclick="clearSel()">ล้างที่เลือก</button>
-    </div>
-  </section>
 
-  <section id="groups" style="margin-top:24px"></section>
-  <div class="pager" id="pager"></div>
-</div>
+      <div class="list"><div id="groups"></div><div class="pager" id="pager"></div></div>
+    </div>
 
-<!-- --------------------------- ถังพักไฟล์ --------------------------- -->
-<div id="paneQ" class="hide">
-  <div class="page-head">
-    <div class="eyebrow">quarantine</div>
-    <h1>ถังพักไฟล์</h1>
-    <p>ไฟล์ที่ย้ายออกมาแล้วแต่ยังไม่ได้ลบจริง — กางดูและคืนกลับได้ทุกเมื่อ</p>
+    <!-- ---------------- ถังพักไฟล์ ---------------- -->
+    <div id="paneQ" class="pane hide">
+      <div class="bar">
+        <span class="lbl">ถังพักที่ค้างอยู่</span>
+        <input id="findPath" class="f grow mono" placeholder="ค้นหาในโฟลเดอร์…">
+        <button class="btn" onclick="pkOpen('findPath')">เลือก…</button>
+        <button class="btn primary" onclick="findQ()">ค้นหา</button>
+      </div>
+      <div class="list"><div id="findOut"></div><div id="batches"></div></div>
+    </div>
   </div>
-
-  <section class="card">
-    <div class="row" style="align-items:flex-start">
-      <div class="grow" style="min-width:240px">
-        <h2 class="card-title">ถังพักไฟล์ที่ค้างอยู่</h2>
-        <p class="card-sub" style="margin-bottom:0">ถ้าเคยย้ายไฟล์ไว้แล้วบัญชีหาย
-          (ลบ <code class="mono">.state</code>, ย้ายเครื่อง, เอาไดรฟ์ไปใช้กับเครื่องอื่น)
-          กดค้นหาเพื่อดึงกลับเข้าระบบ</p>
-      </div>
-      <input id="findPath" class="grow mono" placeholder="ค้นหาในโฟลเดอร์…" style="min-width:220px">
-      <button class="btn" onclick="pkOpen('findPath')">เลือก…</button>
-      <button class="btn primary" onclick="findQ()">ค้นหา</button>
-    </div>
-    <div id="findOut"></div>
-  </section>
-
-  <section id="batches" style="margin-top:24px"></section>
 </div>
 
-</div>
-</main>
-
-<!-- ============================= action bar ============================= -->
 <div class="actionbar">
-  <div>
-    <div class="count"><span id="selCount">0</span> ไฟล์</div>
-    <div class="sub" id="selBytes">ยังไม่ได้เลือกอะไร</div>
-  </div>
+  <span class="count" id="selCount">0</span><span class="muted">ไฟล์</span>
+  <span class="muted" id="selBytes"></span>
   <div class="grow"></div>
   <span class="msg" id="msg"></span>
   <button class="btn quiet hide" id="btnClear" onclick="clearSel()">ล้างที่เลือก</button>
   <button class="btn danger" id="btnDel" disabled onclick="doDelete()">ย้ายไปถังพักไฟล์</button>
 </div>
 
-<!-- =========================== ตัวเลือกโฟลเดอร์ =========================== -->
 <div class="toasts" id="toasts"></div>
 
 <div id="picker" class="modal hide">
   <div class="sheet">
-    <div class="top">
-      <b id="pkTitle" style="flex:1">เลือกโฟลเดอร์</b>
-      <label class="check"><input type="checkbox" id="pkHidden" onchange="pkGo(PK.path)"> แสดงโฟลเดอร์ซ่อน</label>
-      <button class="btn quiet" onclick="pkClose()">ปิด</button>
-    </div>
+    <div class="top"><b id="pkTitle" style="flex:1">เลือกโฟลเดอร์</b>
+      <label class="ck"><input type="checkbox" id="pkHidden" onchange="pkGo(PK.path)"> โฟลเดอร์ซ่อน</label>
+      <button class="btn quiet" onclick="pkClose()">ปิด</button></div>
     <div class="pkbody">
       <div class="pkside" id="pkPlaces"></div>
-      <div class="pkmain">
-        <div class="crumbs" id="pkCrumbs"></div>
-        <div class="pklist" id="pkList"></div>
-      </div>
+      <div class="pkmain"><div class="crumbs" id="pkCrumbs"></div><div class="pklist" id="pkList"></div></div>
     </div>
-    <div class="bot">
-      <input id="pkPath" class="grow mono" onkeydown="if(event.key==='Enter')pkGo(this.value)">
+    <div class="bot"><input id="pkPath" class="f grow mono" onkeydown="if(event.key==='Enter')pkGo(this.value)">
       <button class="btn" onclick="pkGo(document.getElementById('pkPath').value)">ไป</button>
-      <button class="btn primary" onclick="pkPick()">ใช้โฟลเดอร์นี้</button>
-    </div>
+      <button class="btn primary" onclick="pkPick()">ใช้โฟลเดอร์นี้</button></div>
   </div>
 </div>
 
@@ -769,6 +495,7 @@ async function reload(offset) {
   const d = await api('/api/groups?offset=' + offset + '&limit=' + $('pagesize').value +
                       '&sort=' + $('sort').value + '&q=' + encodeURIComponent($('q').value));
   TOTAL = d.total_groups; GROUPS = d.groups;
+  if (INDEXED) slimScan(true);
   $('sGroups').textContent = d.total_groups.toLocaleString();
   $('sFiles').textContent = (d.extra_files || 0).toLocaleString();
   $('sWaste').textContent = d.waste_h;
@@ -1033,6 +760,14 @@ function qThumb(f, ext, cls) {
     '" onerror="this.replaceWith(cellIcon(\'' + esc(ext) + '\',\'' + cls + '\'))"' +
     ' onclick="window.open(\'' + url + '\')">';
 }
+
+function slimScan(on) {
+  $('scanFull').classList.toggle('hide', on);
+  $('scanSlim').classList.toggle('hide', !on);
+  if (on) { $('slimPath').textContent = $('root').value;
+            $('slimCount').textContent = INDEXED.toLocaleString() + ' ไฟล์'; }
+}
+function editScan() { slimScan(false); $('root').focus(); }
 
 function emptyText() {
   if (!INDEXED) return '<b>ยังไม่ได้สแกน</b>เลือกโฟลเดอร์ด้านบนแล้วกด “เริ่มสแกน”';
