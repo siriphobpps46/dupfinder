@@ -1150,6 +1150,18 @@ class Handler(BaseHTTPRequestHandler):
         return emptied
 
 
+def _status_window(url):
+    import tkinter as tk
+    root = tk.Tk()
+    root.title("dupfinder")
+    tk.Label(root, text="dupfinder กำลังทำงาน", font=("", 17, "bold")).pack(padx=46, pady=(26, 2))
+    tk.Label(root, text=url, fg="#777").pack()
+    tk.Button(root, text="เปิดในเบราว์เซอร์",
+              command=lambda: webbrowser.open(url)).pack(pady=(16, 4))
+    tk.Button(root, text="ปิดโปรแกรม", command=root.destroy).pack(pady=(0, 26))
+    root.mainloop()
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--port", type=int, default=8777, help="พอร์ต (ค่าเริ่มต้น 8777)")
@@ -1185,6 +1197,12 @@ def main():
             webbrowser.open(url)
         except Exception:
             pass
+    if FROZEN:
+        # .app ที่ไม่เปิดหน้าต่างเลยจะเด้งค้างอยู่ใน Dock เพราะ macOS รอให้มัน
+        # ลงทะเบียนกับ window server — หน้าต่างเล็กๆ นี้แก้ทั้งอาการเด้งและให้ปุ่มปิด
+        threading.Thread(target=httpd.serve_forever, daemon=True).start()
+        _status_window(url)
+        return
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
