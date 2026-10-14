@@ -12,7 +12,7 @@
   --line:#e3e3e6; --row-line:#eeeef0;
   --text:#1d1d1f; --muted:#8a8a8f;
   --control:#ffffff; --control-line:#d0d0d6;
-  --hover:rgba(0,0,0,.05); --danger:#c0392b; --ok:#1c7f4e; --track:#e6e8ef;
+  --hover:rgba(0,0,0,.05); --danger:#9b1c2e; --ok:#1c7f4e; --track:#e6e8ef;
   color-scheme:light dark;
   font:13px -apple-system,"SF Pro Text","Noto Sans Thai","Sukhumvit Set","Helvetica Neue",sans-serif;
   color:var(--text); background:var(--window); -webkit-font-smoothing:antialiased;
@@ -23,7 +23,7 @@
   --line:#3a3a3e; --row-line:#2e2e31;
   --text:#ececef; --muted:#8e8e94;
   --control:#3a3a3e; --control-line:#4a4a4f;
-  --hover:rgba(255,255,255,.07); --danger:#ff6b5e; --ok:#5fd694; --track:#3a3a3e;
+  --hover:rgba(255,255,255,.07); --danger:#f08a96; --ok:#5fd694; --track:#3a3a3e;
 }}
 *{box-sizing:border-box}
 body{margin:0;height:100vh;display:flex;flex-direction:column;overflow:hidden;
@@ -77,9 +77,10 @@ h1,h2,p{margin:0}
 .btn{height:28px;padding:0 12px;border-radius:7px;background:var(--control);
   border:1px solid var(--control-line);white-space:nowrap}
 .btn:hover{background:var(--hover)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
-.btn.primary:hover{background:var(--accent-hover)}
-.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff;font-weight:500}
+.btn.primary{background:none;border-color:var(--accent);color:var(--accent-text);font-weight:500}
+.btn.primary:hover{background:var(--accent-soft)}
+.btn.danger{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+.btn.danger:hover{background:var(--accent-hover)}
 .btn.quiet{background:none;border-color:transparent;color:var(--muted)}
 .btn.quiet:hover{background:var(--hover);color:var(--text)}
 .btn:disabled{opacity:.4}
